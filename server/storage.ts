@@ -1,13 +1,12 @@
 import { 
   users, type User, type InsertUser,
   campaigns, type Campaign, type InsertCampaign,
-  contents, type Content, type InsertContent,
   events, type Event, type InsertEvent,
-  analytics, type Analytics, type InsertAnalytics,
-  integrations, type Integration, type InsertIntegration
+  contents, type Content, type InsertContent,
+  images, type Image, type InsertImage,
+  analytics, type Analytics, type InsertAnalytics
 } from "@shared/schema";
 
-// Storage interface
 export interface IStorage {
   // User operations
   getUser(id: number): Promise<User | undefined>;
@@ -15,73 +14,78 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   
   // Campaign operations
-  getCampaigns(userId: number): Promise<Campaign[]>;
   getCampaign(id: number): Promise<Campaign | undefined>;
+  getCampaignsByUserId(userId: number): Promise<Campaign[]>;
   createCampaign(campaign: InsertCampaign): Promise<Campaign>;
-  updateCampaign(id: number, campaign: Partial<Campaign>): Promise<Campaign | undefined>;
+  updateCampaign(id: number, campaign: Partial<InsertCampaign>): Promise<Campaign | undefined>;
   deleteCampaign(id: number): Promise<boolean>;
   
-  // Content operations
-  getContents(userId: number, filters?: Partial<Content>): Promise<Content[]>;
-  getContent(id: number): Promise<Content | undefined>;
-  createContent(content: InsertContent): Promise<Content>;
-  updateContent(id: number, content: Partial<Content>): Promise<Content | undefined>;
-  deleteContent(id: number): Promise<boolean>;
-  
   // Event operations
-  getEvents(userId: number): Promise<Event[]>;
   getEvent(id: number): Promise<Event | undefined>;
+  getEventsByUserId(userId: number): Promise<Event[]>;
   createEvent(event: InsertEvent): Promise<Event>;
-  updateEvent(id: number, event: Partial<Event>): Promise<Event | undefined>;
+  updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<boolean>;
   
-  // Analytics operations
-  getAnalytics(userId: number, campaignId?: number): Promise<Analytics[]>;
-  createAnalytics(analytics: InsertAnalytics): Promise<Analytics>;
+  // Content operations
+  getContent(id: number): Promise<Content | undefined>;
+  getContentsByUserId(userId: number): Promise<Content[]>;
+  getContentsByCampaignId(campaignId: number): Promise<Content[]>;
+  createContent(content: InsertContent): Promise<Content>;
+  updateContent(id: number, content: Partial<InsertContent>): Promise<Content | undefined>;
+  deleteContent(id: number): Promise<boolean>;
   
-  // Integration operations
-  getIntegrations(userId: number): Promise<Integration[]>;
-  getIntegration(id: number): Promise<Integration | undefined>;
-  createIntegration(integration: InsertIntegration): Promise<Integration>;
-  updateIntegration(id: number, integration: Partial<Integration>): Promise<Integration | undefined>;
+  // Image operations
+  getImage(id: number): Promise<Image | undefined>;
+  getImagesByUserId(userId: number): Promise<Image[]>;
+  getImagesByCampaignId(campaignId: number): Promise<Image[]>;
+  createImage(image: InsertImage): Promise<Image>;
+  updateImage(id: number, image: Partial<InsertImage>): Promise<Image | undefined>;
+  deleteImage(id: number): Promise<boolean>;
+  
+  // Analytics operations
+  getAnalyticsByUserId(userId: number): Promise<Analytics[]>;
+  getAnalyticsByCampaignId(campaignId: number): Promise<Analytics[]>;
+  createAnalytics(analytics: InsertAnalytics): Promise<Analytics>;
+  updateAnalytics(id: number, analytics: Partial<InsertAnalytics>): Promise<Analytics | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private campaigns: Map<number, Campaign>;
-  private contents: Map<number, Content>;
   private events: Map<number, Event>;
+  private contents: Map<number, Content>;
+  private images: Map<number, Image>;
   private analytics: Map<number, Analytics>;
-  private integrations: Map<number, Integration>;
   
-  private currentUserId: number;
-  private currentCampaignId: number;
-  private currentContentId: number;
-  private currentEventId: number;
-  private currentAnalyticsId: number;
-  private currentIntegrationId: number;
+  private userIdCounter: number;
+  private campaignIdCounter: number;
+  private eventIdCounter: number;
+  private contentIdCounter: number;
+  private imageIdCounter: number;
+  private analyticsIdCounter: number;
 
   constructor() {
     this.users = new Map();
     this.campaigns = new Map();
-    this.contents = new Map();
     this.events = new Map();
+    this.contents = new Map();
+    this.images = new Map();
     this.analytics = new Map();
-    this.integrations = new Map();
     
-    this.currentUserId = 1;
-    this.currentCampaignId = 1;
-    this.currentContentId = 1;
-    this.currentEventId = 1;
-    this.currentAnalyticsId = 1;
-    this.currentIntegrationId = 1;
-    
-    // Add demo user
+    this.userIdCounter = 1;
+    this.campaignIdCounter = 1;
+    this.eventIdCounter = 1;
+    this.contentIdCounter = 1;
+    this.imageIdCounter = 1;
+    this.analyticsIdCounter = 1;
+
+    // Create a default user
     this.createUser({
       username: "demo",
       password: "password",
+      email: "demo@example.com",
       name: "Sarah Johnson",
-      email: "sarah@example.com",
       role: "Marketing Manager"
     });
   }
@@ -93,40 +97,42 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.username === username
     );
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentUserId++;
-    const user: User = { ...insertUser, id, createdAt: new Date() };
+    const id = this.userIdCounter++;
+    const createdAt = new Date();
+    const user: User = { ...insertUser, id, createdAt };
     this.users.set(id, user);
     return user;
   }
 
   // Campaign operations
-  async getCampaigns(userId: number): Promise<Campaign[]> {
-    return Array.from(this.campaigns.values()).filter(
-      (campaign) => campaign.userId === userId,
-    );
-  }
-
   async getCampaign(id: number): Promise<Campaign | undefined> {
     return this.campaigns.get(id);
   }
 
+  async getCampaignsByUserId(userId: number): Promise<Campaign[]> {
+    return Array.from(this.campaigns.values()).filter(
+      (campaign) => campaign.userId === userId
+    );
+  }
+
   async createCampaign(insertCampaign: InsertCampaign): Promise<Campaign> {
-    const id = this.currentCampaignId++;
-    const campaign: Campaign = { ...insertCampaign, id, createdAt: new Date() };
+    const id = this.campaignIdCounter++;
+    const createdAt = new Date();
+    const campaign: Campaign = { ...insertCampaign, id, createdAt };
     this.campaigns.set(id, campaign);
     return campaign;
   }
 
-  async updateCampaign(id: number, campaignUpdate: Partial<Campaign>): Promise<Campaign | undefined> {
+  async updateCampaign(id: number, updateData: Partial<InsertCampaign>): Promise<Campaign | undefined> {
     const campaign = this.campaigns.get(id);
     if (!campaign) return undefined;
-
-    const updatedCampaign = { ...campaign, ...campaignUpdate };
+    
+    const updatedCampaign = { ...campaign, ...updateData };
     this.campaigns.set(id, updatedCampaign);
     return updatedCampaign;
   }
@@ -135,73 +141,30 @@ export class MemStorage implements IStorage {
     return this.campaigns.delete(id);
   }
 
-  // Content operations
-  async getContents(userId: number, filters?: Partial<Content>): Promise<Content[]> {
-    let contents = Array.from(this.contents.values()).filter(
-      (content) => content.userId === userId,
-    );
-
-    if (filters) {
-      contents = contents.filter(content => {
-        for (const [key, value] of Object.entries(filters)) {
-          if (content[key as keyof Content] !== value) {
-            return false;
-          }
-        }
-        return true;
-      });
-    }
-
-    return contents;
-  }
-
-  async getContent(id: number): Promise<Content | undefined> {
-    return this.contents.get(id);
-  }
-
-  async createContent(insertContent: InsertContent): Promise<Content> {
-    const id = this.currentContentId++;
-    const content: Content = { ...insertContent, id, createdAt: new Date() };
-    this.contents.set(id, content);
-    return content;
-  }
-
-  async updateContent(id: number, contentUpdate: Partial<Content>): Promise<Content | undefined> {
-    const content = this.contents.get(id);
-    if (!content) return undefined;
-
-    const updatedContent = { ...content, ...contentUpdate };
-    this.contents.set(id, updatedContent);
-    return updatedContent;
-  }
-
-  async deleteContent(id: number): Promise<boolean> {
-    return this.contents.delete(id);
-  }
-
   // Event operations
-  async getEvents(userId: number): Promise<Event[]> {
-    return Array.from(this.events.values()).filter(
-      (event) => event.userId === userId,
-    );
-  }
-
   async getEvent(id: number): Promise<Event | undefined> {
     return this.events.get(id);
   }
 
+  async getEventsByUserId(userId: number): Promise<Event[]> {
+    return Array.from(this.events.values()).filter(
+      (event) => event.userId === userId
+    );
+  }
+
   async createEvent(insertEvent: InsertEvent): Promise<Event> {
-    const id = this.currentEventId++;
-    const event: Event = { ...insertEvent, id, createdAt: new Date() };
+    const id = this.eventIdCounter++;
+    const createdAt = new Date();
+    const event: Event = { ...insertEvent, id, createdAt };
     this.events.set(id, event);
     return event;
   }
 
-  async updateEvent(id: number, eventUpdate: Partial<Event>): Promise<Event | undefined> {
+  async updateEvent(id: number, updateData: Partial<InsertEvent>): Promise<Event | undefined> {
     const event = this.events.get(id);
     if (!event) return undefined;
-
-    const updatedEvent = { ...event, ...eventUpdate };
+    
+    const updatedEvent = { ...event, ...updateData };
     this.events.set(id, updatedEvent);
     return updatedEvent;
   }
@@ -210,210 +173,111 @@ export class MemStorage implements IStorage {
     return this.events.delete(id);
   }
 
-  // Analytics operations
-  async getAnalytics(userId: number, campaignId?: number): Promise<Analytics[]> {
-    let results = Array.from(this.analytics.values()).filter(
-      (analytic) => analytic.userId === userId,
+  // Content operations
+  async getContent(id: number): Promise<Content | undefined> {
+    return this.contents.get(id);
+  }
+
+  async getContentsByUserId(userId: number): Promise<Content[]> {
+    return Array.from(this.contents.values()).filter(
+      (content) => content.userId === userId
     );
+  }
 
-    if (campaignId) {
-      results = results.filter(analytic => analytic.campaignId === campaignId);
-    }
+  async getContentsByCampaignId(campaignId: number): Promise<Content[]> {
+    return Array.from(this.contents.values()).filter(
+      (content) => content.campaignId === campaignId
+    );
+  }
 
-    return results;
+  async createContent(insertContent: InsertContent): Promise<Content> {
+    const id = this.contentIdCounter++;
+    const createdAt = new Date();
+    const content: Content = { ...insertContent, id, createdAt };
+    this.contents.set(id, content);
+    return content;
+  }
+
+  async updateContent(id: number, updateData: Partial<InsertContent>): Promise<Content | undefined> {
+    const content = this.contents.get(id);
+    if (!content) return undefined;
+    
+    const updatedContent = { ...content, ...updateData };
+    this.contents.set(id, updatedContent);
+    return updatedContent;
+  }
+
+  async deleteContent(id: number): Promise<boolean> {
+    return this.contents.delete(id);
+  }
+
+  // Image operations
+  async getImage(id: number): Promise<Image | undefined> {
+    return this.images.get(id);
+  }
+
+  async getImagesByUserId(userId: number): Promise<Image[]> {
+    return Array.from(this.images.values()).filter(
+      (image) => image.userId === userId
+    );
+  }
+
+  async getImagesByCampaignId(campaignId: number): Promise<Image[]> {
+    return Array.from(this.images.values()).filter(
+      (image) => image.campaignId === campaignId
+    );
+  }
+
+  async createImage(insertImage: InsertImage): Promise<Image> {
+    const id = this.imageIdCounter++;
+    const createdAt = new Date();
+    const image: Image = { ...insertImage, id, createdAt };
+    this.images.set(id, image);
+    return image;
+  }
+
+  async updateImage(id: number, updateData: Partial<InsertImage>): Promise<Image | undefined> {
+    const image = this.images.get(id);
+    if (!image) return undefined;
+    
+    const updatedImage = { ...image, ...updateData };
+    this.images.set(id, updatedImage);
+    return updatedImage;
+  }
+
+  async deleteImage(id: number): Promise<boolean> {
+    return this.images.delete(id);
+  }
+
+  // Analytics operations
+  async getAnalyticsByUserId(userId: number): Promise<Analytics[]> {
+    return Array.from(this.analytics.values()).filter(
+      (analytics) => analytics.userId === userId
+    );
+  }
+
+  async getAnalyticsByCampaignId(campaignId: number): Promise<Analytics[]> {
+    return Array.from(this.analytics.values()).filter(
+      (analytics) => analytics.campaignId === campaignId
+    );
   }
 
   async createAnalytics(insertAnalytics: InsertAnalytics): Promise<Analytics> {
-    const id = this.currentAnalyticsId++;
-    const analytics: Analytics = { ...insertAnalytics, id, createdAt: new Date() };
+    const id = this.analyticsIdCounter++;
+    const createdAt = new Date();
+    const analytics: Analytics = { ...insertAnalytics, id, createdAt };
     this.analytics.set(id, analytics);
     return analytics;
   }
 
-  // Integration operations
-  async getIntegrations(userId: number): Promise<Integration[]> {
-    return Array.from(this.integrations.values()).filter(
-      (integration) => integration.userId === userId,
-    );
-  }
-
-  async getIntegration(id: number): Promise<Integration | undefined> {
-    return this.integrations.get(id);
-  }
-
-  async createIntegration(insertIntegration: InsertIntegration): Promise<Integration> {
-    const id = this.currentIntegrationId++;
-    const integration: Integration = { ...insertIntegration, id, createdAt: new Date() };
-    this.integrations.set(id, integration);
-    return integration;
-  }
-
-  async updateIntegration(id: number, integrationUpdate: Partial<Integration>): Promise<Integration | undefined> {
-    const integration = this.integrations.get(id);
-    if (!integration) return undefined;
-
-    const updatedIntegration = { ...integration, ...integrationUpdate };
-    this.integrations.set(id, updatedIntegration);
-    return updatedIntegration;
+  async updateAnalytics(id: number, updateData: Partial<InsertAnalytics>): Promise<Analytics | undefined> {
+    const analytics = this.analytics.get(id);
+    if (!analytics) return undefined;
+    
+    const updatedAnalytics = { ...analytics, ...updateData };
+    this.analytics.set(id, updatedAnalytics);
+    return updatedAnalytics;
   }
 }
 
 export const storage = new MemStorage();
-
-// Initialize demo data
-(async () => {
-  const user = await storage.getUserByUsername("demo");
-  if (!user) return;
-
-  // Create demo campaigns
-  const campaign1 = await storage.createCampaign({
-    name: "Holiday Special Promotion",
-    description: "Promotion for holiday season products",
-    startDate: new Date("2023-11-15"),
-    endDate: new Date("2023-12-25"),
-    budget: 5000,
-    status: "active",
-    platform: "google_ads",
-    userId: user.id,
-    metrics: {
-      roas: 4.2,
-      ctr: 3.8,
-      conversionRate: 2.1,
-      progress: 67
-    }
-  });
-
-  const campaign2 = await storage.createCampaign({
-    name: "End of Year Flash Sale",
-    description: "Flash sale for end of year inventory clearance",
-    startDate: new Date("2023-12-26"),
-    endDate: new Date("2023-12-31"),
-    budget: 2500,
-    status: "active",
-    platform: "social_media",
-    userId: user.id,
-    metrics: {
-      roas: 0,
-      ctr: 0,
-      conversionRate: 0,
-      progress: 0
-    }
-  });
-
-  const campaign3 = await storage.createCampaign({
-    name: "New Year Collection",
-    description: "Launch of new year product collection",
-    startDate: new Date("2024-01-01"),
-    endDate: new Date("2024-01-15"),
-    budget: 3000,
-    status: "scheduled",
-    platform: "email",
-    userId: user.id,
-    metrics: {
-      estReach: 35000,
-      contentCount: 6,
-      progress: 75
-    }
-  });
-
-  // Create demo content
-  await storage.createContent({
-    title: "Black Friday Campaign Announcement",
-    description: "Blog post + social",
-    type: "blog_post",
-    content: "Get ready for our biggest sale of the year...",
-    scheduledDate: new Date("2023-11-20T10:00:00"),
-    status: "draft",
-    platforms: ["Blog", "Instagram", "Twitter"],
-    userId: user.id,
-    campaignId: campaign1.id
-  });
-
-  await storage.createContent({
-    title: "Holiday Gift Guide",
-    description: "Product showcase",
-    type: "social_media",
-    content: "Discover the perfect gifts for everyone...",
-    scheduledDate: new Date("2023-11-25T14:00:00"),
-    status: "ready",
-    platforms: ["Facebook", "Instagram", "Email"],
-    userId: user.id,
-    campaignId: campaign1.id
-  });
-
-  await storage.createContent({
-    title: "New Product Launch Video",
-    description: "Product spotlight",
-    type: "video",
-    content: "Introducing our revolutionary new product...",
-    scheduledDate: new Date("2023-12-01T09:00:00"),
-    status: "in_progress",
-    platforms: ["YouTube", "Website"],
-    userId: user.id,
-    campaignId: campaign1.id
-  });
-
-  // Create demo analytics
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  
-  await storage.createAnalytics({
-    date: today,
-    source: "google_analytics",
-    metrics: {
-      impressions: 125400,
-      impressionsChange: 12,
-      clicks: 8230,
-      clicksChange: 8.2,
-      conversions: 1243,
-      conversionsChange: 5.3,
-      revenue: 42589,
-      revenueChange: -2.1
-    },
-    userId: user.id
-  });
-
-  await storage.createAnalytics({
-    date: yesterday,
-    source: "google_ads",
-    metrics: {
-      impressions: 112000,
-      clicks: 7600,
-      conversions: 1180,
-      revenue: 43500,
-      ctr: 6.8,
-      conversionRate: 15.5,
-      costPerConversion: 12.3,
-      roas: 3.8
-    },
-    userId: user.id,
-    campaignId: campaign1.id
-  });
-
-  // Create demo integrations
-  await storage.createIntegration({
-    name: "google_analytics",
-    isActive: true,
-    settings: {
-      accountId: "UA-12345678-1"
-    },
-    userId: user.id
-  });
-
-  await storage.createIntegration({
-    name: "google_ads",
-    isActive: true,
-    settings: {
-      accountId: "AW-12345678"
-    },
-    userId: user.id
-  });
-
-  await storage.createIntegration({
-    name: "facebook_ads",
-    isActive: false,
-    settings: {},
-    userId: user.id
-  });
-})();

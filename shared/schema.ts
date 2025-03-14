@@ -1,158 +1,165 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User table
+// User schema
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  name: text("name"),
-  email: text("email"),
-  role: text("role"),
-  createdAt: timestamp("created_at").defaultNow()
+  email: text("email").notNull().unique(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("user"),
+  googleTokens: json("google_tokens"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
-  name: true,
   email: true,
+  name: true,
   role: true,
 });
 
-// Campaign table
+// Marketing Campaign schema
 export const campaigns = pgTable("campaigns", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
   name: text("name").notNull(),
   description: text("description"),
   startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
+  endDate: timestamp("end_date"),
+  status: text("status").notNull().default("draft"),
   budget: integer("budget"),
-  status: text("status").notNull().default("draft"), // draft, active, paused, completed
-  platform: text("platform"), // google_ads, facebook, email, etc.
-  userId: integer("user_id").notNull(),
-  metrics: jsonb("metrics"), // Object containing metrics data
-  createdAt: timestamp("created_at").defaultNow()
+  platform: text("platform"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertCampaignSchema = createInsertSchema(campaigns).pick({
+  userId: true,
   name: true,
   description: true,
   startDate: true,
   endDate: true,
+  status: true,
   budget: true,
-  status: true,
   platform: true,
-  userId: true,
-  metrics: true,
 });
 
-// Content table
-export const contents = pgTable("contents", {
-  id: serial("id").primaryKey(),
-  title: text("title").notNull(),
-  description: text("description"),
-  type: text("type").notNull(), // blog_post, social_media, email, ad_copy, etc.
-  content: text("content"),
-  scheduledDate: timestamp("scheduled_date"),
-  status: text("status").notNull().default("draft"), // draft, scheduled, published
-  platforms: text("platforms").array(), // Array of platforms (Instagram, Twitter, etc.)
-  campaignId: integer("campaign_id"),
-  userId: integer("user_id").notNull(),
-  imageUrl: text("image_url"),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const insertContentSchema = createInsertSchema(contents).pick({
-  title: true,
-  description: true,
-  type: true,
-  content: true,
-  scheduledDate: true,
-  status: true,
-  platforms: true,
-  campaignId: true,
-  userId: true,
-  imageUrl: true,
-});
-
-// Calendar Event table
+// Event schema
 export const events = pgTable("events", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
   title: text("title").notNull(),
   description: text("description"),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  allDay: boolean("all_day").default(false),
-  type: text("type").default("event"), // event, campaign, content
-  relatedId: integer("related_id"), // ID of related campaign or content
-  userId: integer("user_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow()
+  date: timestamp("date").notNull(),
+  type: text("type").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertEventSchema = createInsertSchema(events).pick({
+  userId: true,
   title: true,
   description: true,
-  startDate: true,
-  endDate: true,
-  allDay: true,
+  date: true,
   type: true,
-  relatedId: true,
-  userId: true,
+  status: true,
 });
 
-// Analytics data
+// Content schema
+export const contents = pgTable("contents", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  campaignId: integer("campaign_id").references(() => campaigns.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  contentType: text("content_type").notNull(),
+  content: text("content").notNull(),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow(),
+  scheduledFor: timestamp("scheduled_for"),
+});
+
+export const insertContentSchema = createInsertSchema(contents).pick({
+  userId: true,
+  campaignId: true,
+  title: true,
+  description: true,
+  contentType: true,
+  content: true,
+  status: true,
+  scheduledFor: true,
+});
+
+// Image schema
+export const images = pgTable("images", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  campaignId: integer("campaign_id").references(() => campaigns.id),
+  title: text("title").notNull(),
+  description: text("description"),
+  prompt: text("prompt").notNull(),
+  imageUrl: text("image_url").notNull(),
+  style: text("style"),
+  size: text("size"),
+  status: text("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertImageSchema = createInsertSchema(images).pick({
+  userId: true,
+  campaignId: true,
+  title: true, 
+  description: true,
+  prompt: true,
+  imageUrl: true,
+  style: true,
+  size: true,
+  status: true,
+});
+
+// Analytics schema
 export const analytics = pgTable("analytics", {
   id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  campaignId: integer("campaign_id").references(() => campaigns.id),
   date: timestamp("date").notNull(),
-  source: text("source").notNull(), // google_analytics, google_ads, etc.
-  metrics: jsonb("metrics").notNull(), // Object containing various metrics
-  userId: integer("user_id").notNull(),
-  campaignId: integer("campaign_id"),
-  createdAt: timestamp("created_at").defaultNow()
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  conversions: integer("conversions").default(0),
+  revenue: integer("revenue").default(0),
+  source: text("source").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const insertAnalyticsSchema = createInsertSchema(analytics).pick({
-  date: true,
-  source: true,
-  metrics: true,
   userId: true,
   campaignId: true,
-});
-
-// Integration settings
-export const integrations = pgTable("integrations", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(), // google_analytics, google_ads, facebook, etc.
-  isActive: boolean("is_active").default(false),
-  settings: jsonb("settings"), // Object containing integration settings
-  userId: integer("user_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow()
-});
-
-export const insertIntegrationSchema = createInsertSchema(integrations).pick({
-  name: true,
-  isActive: true,
-  settings: true,
-  userId: true,
+  date: true,
+  impressions: true,
+  clicks: true,
+  conversions: true,
+  revenue: true,
+  source: true,
 });
 
 // Export types
-export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
 
-export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 export type Campaign = typeof campaigns.$inferSelect;
+export type InsertCampaign = z.infer<typeof insertCampaignSchema>;
 
-export type InsertContent = z.infer<typeof insertContentSchema>;
-export type Content = typeof contents.$inferSelect;
-
-export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;
+export type InsertEvent = z.infer<typeof insertEventSchema>;
 
-export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
+export type Content = typeof contents.$inferSelect;
+export type InsertContent = z.infer<typeof insertContentSchema>;
+
+export type Image = typeof images.$inferSelect;
+export type InsertImage = z.infer<typeof insertImageSchema>;
+
 export type Analytics = typeof analytics.$inferSelect;
-
-export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
-export type Integration = typeof integrations.$inferSelect;
+export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
