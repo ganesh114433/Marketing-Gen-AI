@@ -11,6 +11,14 @@ import {
 } from "@shared/schema";
 import { generateContent, generateImage } from "./api/openai";
 import { getAuthUrl, getTokensFromCode, getGoogleAdsData, getGoogleAnalyticsData } from "./api/google";
+import { 
+  getAutomationStatus, 
+  toggleAutoPosting, 
+  toggleEventScheduler, 
+  addCompanySpecialDates, 
+  forceCheckEvents, 
+  getAutomationActivity 
+} from "./api/automation";
 import { ZodError } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -329,10 +337,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
       
       // Calculate campaign performance (example formula)
-      const totalImpressions = campaignMetrics.reduce((sum, metric) => sum + metric.impressions, 0);
-      const totalClicks = campaignMetrics.reduce((sum, metric) => sum + metric.clicks, 0);
-      const totalConversions = campaignMetrics.reduce((sum, metric) => sum + metric.conversions, 0);
-      const totalAdSpend = campaignMetrics.reduce((sum, metric) => sum + metric.adSpend, 0);
+      const totalImpressions = campaignMetrics.reduce((sum, metric) => sum + (metric.impressions || 0), 0);
+      const totalClicks = campaignMetrics.reduce((sum, metric) => sum + (metric.clicks || 0), 0);
+      const totalConversions = campaignMetrics.reduce((sum, metric) => sum + (metric.conversions || 0), 0);
+      const totalAdSpend = campaignMetrics.reduce((sum, metric) => sum + (metric.adSpend || 0), 0);
       
       const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
       const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0;
@@ -341,13 +349,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter upcoming calendar events
       const now = new Date();
       const upcomingEvents = calendarEvents
-        .filter(event => new Date(event.startDate) > now)
-        .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime())
+        .filter(event => {
+          const startDate = event.startDate;
+          return startDate instanceof Date && startDate > now;
+        })
+        .sort((a, b) => {
+          const aDate = a.startDate instanceof Date ? a.startDate : new Date(a.startDate);
+          const bDate = b.startDate instanceof Date ? b.startDate : new Date(b.startDate);
+          return aDate.getTime() - bDate.getTime();
+        })
         .slice(0, 5);
       
       // Recent content
       const recentContent = contentEntries
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .filter(content => content.createdAt instanceof Date)
+        .sort((a, b) => {
+          const aDate = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt || 0);
+          const bDate = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt || 0);
+          return bDate.getTime() - aDate.getTime();
+        })
         .slice(0, 5);
       
       res.json({
@@ -358,7 +378,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           contentCount: {
             value: contentEntries.length,
-            recent: contentEntries.filter(c => new Date(c.createdAt) > new Date(Date.now() - 24 * 60 * 60 * 1000)).length,
+            recent: contentEntries.filter(c => {
+              if (!c.createdAt) return false;
+              const createdAt = c.createdAt instanceof Date ? c.createdAt : new Date(c.createdAt);
+              return createdAt > new Date(Date.now() - 24 * 60 * 60 * 1000);
+            }).length,
           },
           adSpend: {
             value: (totalAdSpend / 100).toFixed(2), // Convert cents to dollars
@@ -386,6 +410,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       next(error);
     }
   });
+
+  // Automation endpoints
+  router.get("/automation/status", getAutomationStatus);
+  router.post("/automation/toggle-autoposting", toggleAutoPosting);
+  router.post("/automation/toggle-scheduler", toggleEventScheduler);
+  router.post("/automation/add-special-dates", addCompanySpecialDates);
+  router.post("/automation/check-events", forceCheckEvents);
+  router.get("/automation/activity", getAutomationActivity);
 
   // Register all routes with the /api prefix
   app.use("/api", router);

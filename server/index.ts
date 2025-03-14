@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { autoPostingService } from "./services/autoPostingService";
+import { eventScheduler } from "./services/eventScheduler";
 
 const app = express();
 app.use(express.json());
@@ -66,5 +68,13 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the auto-posting service (check every 10 minutes)
+    autoPostingService.start(10);
+    log('Auto-posting service started', 'service');
+    
+    // Start the event scheduler (check every day)
+    eventScheduler.start(1);
+    log('Event scheduler service started', 'service');
   });
 })();
