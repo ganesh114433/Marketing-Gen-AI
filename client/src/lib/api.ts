@@ -1,164 +1,159 @@
+// API utilities for making requests to backend endpoints
+import { ContentGenerationRequest, ImageGenerationRequest } from "@shared/schema";
 import { apiRequest } from "./queryClient";
 
-// User API
-export async function getCurrentUser() {
-  const res = await apiRequest("GET", "/api/user");
-  return res.json();
-}
-
-// Campaign API
-export async function getCampaigns(userId: number) {
-  const res = await apiRequest("GET", `/api/campaigns?userId=${userId}`);
-  return res.json();
-}
-
-export async function getCampaign(id: number) {
-  const res = await apiRequest("GET", `/api/campaigns/${id}`);
-  return res.json();
-}
-
-export async function createCampaign(campaignData: any) {
-  const res = await apiRequest("POST", "/api/campaigns", campaignData);
-  return res.json();
-}
-
-export async function updateCampaign(id: number, campaignData: any) {
-  const res = await apiRequest("PUT", `/api/campaigns/${id}`, campaignData);
-  return res.json();
-}
-
-export async function deleteCampaign(id: number) {
-  await apiRequest("DELETE", `/api/campaigns/${id}`);
-  return true;
-}
+// Dashboard API
+export const fetchDashboardSummary = async (userId: number) => {
+  const response = await fetch(`/api/dashboard/summary?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch dashboard summary data');
+  }
+  return response.json();
+};
 
 // Content API
-export async function getContents(userId: number, filters?: any) {
-  let url = `/api/contents?userId=${userId}`;
-  
-  if (filters) {
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        url += `&${key}=${value}`;
-      }
-    });
+export const generateContent = async (contentRequest: ContentGenerationRequest) => {
+  try {
+    const response = await apiRequest('POST', '/api/content/generate', contentRequest);
+    return response.json();
+  } catch (error) {
+    console.error('Content generation failed:', error);
+    throw error;
   }
-  
-  const res = await apiRequest("GET", url);
-  return res.json();
-}
+};
 
-export async function getContent(id: number) {
-  const res = await apiRequest("GET", `/api/contents/${id}`);
-  return res.json();
-}
-
-export async function createContent(contentData: any) {
-  const res = await apiRequest("POST", "/api/contents", contentData);
-  return res.json();
-}
-
-export async function updateContent(id: number, contentData: any) {
-  const res = await apiRequest("PUT", `/api/contents/${id}`, contentData);
-  return res.json();
-}
-
-export async function deleteContent(id: number) {
-  await apiRequest("DELETE", `/api/contents/${id}`);
-  return true;
-}
-
-export async function generateAiContent(data: { contentType: string; topic: string; tone: string; additionalContext?: string }) {
-  const res = await apiRequest("POST", "/api/contents/generate", data);
-  return res.json();
-}
-
-export async function generateContentFromEvent(data: { eventId: number; contentType: string; tone: string }) {
-  const res = await apiRequest("POST", "/api/contents/generate-from-event", data);
-  return res.json();
-}
-
-// Image Generation API
-export async function generateImagePrompt(data: { topic: string; style: string; industry: string }) {
-  const res = await apiRequest("POST", "/api/images/prompt", data);
-  return res.json();
-}
-
-export async function generateImage(data: { prompt: string }) {
-  const res = await apiRequest("POST", "/api/images/generate", data);
-  return res.json();
-}
-
-export async function generateMarketingImage(data: { topic: string; style: string; industry: string }) {
-  const res = await apiRequest("POST", "/api/images/marketing", data);
-  return res.json();
-}
-
-// Analytics API
-export async function getDashboardAnalytics(userId: number) {
-  const res = await apiRequest("GET", `/api/analytics/dashboard?userId=${userId}`);
-  return res.json();
-}
-
-export async function getGoogleAnalyticsData(dateRange?: { startDate: string; endDate: string }) {
-  let url = "/api/analytics/google";
-  
-  if (dateRange) {
-    url += `?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`;
+export const saveContent = async (content: any) => {
+  try {
+    const response = await apiRequest('POST', '/api/content', content);
+    return response.json();
+  } catch (error) {
+    console.error('Content saving failed:', error);
+    throw error;
   }
-  
-  const res = await apiRequest("GET", url);
-  return res.json();
-}
+};
 
-export async function getGoogleAdsData(campaignIds?: string[], dateRange?: { startDate: string; endDate: string }) {
-  let url = "/api/analytics/ads";
-  const params = [];
-  
-  if (campaignIds && campaignIds.length > 0) {
-    params.push(`campaignIds=${campaignIds.join(',')}`);
+export const fetchUserContent = async (userId: number) => {
+  const response = await fetch(`/api/content?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch user content');
   }
-  
-  if (dateRange) {
-    params.push(`startDate=${dateRange.startDate}`);
-    params.push(`endDate=${dateRange.endDate}`);
+  return response.json();
+};
+
+// Image API
+export const generateImage = async (imageRequest: ImageGenerationRequest) => {
+  try {
+    const response = await apiRequest('POST', '/api/images/generate', imageRequest);
+    return response.json();
+  } catch (error) {
+    console.error('Image generation failed:', error);
+    throw error;
   }
-  
-  if (params.length > 0) {
-    url += `?${params.join('&')}`;
+};
+
+export const saveImage = async (image: any) => {
+  try {
+    const response = await apiRequest('POST', '/api/images', image);
+    return response.json();
+  } catch (error) {
+    console.error('Image saving failed:', error);
+    throw error;
   }
-  
-  const res = await apiRequest("GET", url);
-  return res.json();
-}
+};
 
-// Calendar Event API
-export async function getEvents(userId: number) {
-  const res = await apiRequest("GET", `/api/events?userId=${userId}`);
-  return res.json();
-}
+export const fetchUserImages = async (userId: number) => {
+  const response = await fetch(`/api/images?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch user images');
+  }
+  return response.json();
+};
 
-export async function getEvent(id: number) {
-  const res = await apiRequest("GET", `/api/events/${id}`);
-  return res.json();
-}
+// Calendar Events API
+export const fetchCalendarEvents = async (userId: number) => {
+  const response = await fetch(`/api/events?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch calendar events');
+  }
+  return response.json();
+};
 
-export async function createEvent(eventData: any) {
-  const res = await apiRequest("POST", "/api/events", eventData);
-  return res.json();
-}
+export const createCalendarEvent = async (eventData: any) => {
+  try {
+    const response = await apiRequest('POST', '/api/events', eventData);
+    return response.json();
+  } catch (error) {
+    console.error('Event creation failed:', error);
+    throw error;
+  }
+};
 
-export async function updateEvent(id: number, eventData: any) {
-  const res = await apiRequest("PUT", `/api/events/${id}`, eventData);
-  return res.json();
-}
+export const updateCalendarEvent = async (eventId: number, eventData: any) => {
+  try {
+    const response = await apiRequest('PATCH', `/api/events/${eventId}`, eventData);
+    return response.json();
+  } catch (error) {
+    console.error('Event update failed:', error);
+    throw error;
+  }
+};
 
-export async function deleteEvent(id: number) {
-  await apiRequest("DELETE", `/api/events/${id}`);
-  return true;
-}
+// Campaign Metrics API
+export const fetchCampaignMetrics = async (userId: number) => {
+  const response = await fetch(`/api/metrics?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch campaign metrics');
+  }
+  return response.json();
+};
 
-export async function getUpcomingEvents(userId: number) {
-  const res = await apiRequest("GET", `/api/events/upcoming?userId=${userId}`);
-  return res.json();
-}
+// Google Integration APIs
+export const fetchGoogleAdsData = async (userId: number) => {
+  const response = await fetch(`/api/google/ads?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch Google Ads data');
+  }
+  return response.json();
+};
+
+export const fetchGoogleAnalyticsData = async (userId: number) => {
+  const response = await fetch(`/api/google/analytics?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch Google Analytics data');
+  }
+  return response.json();
+};
+
+export const fetchIntegrations = async (userId: number) => {
+  const response = await fetch(`/api/integrations?userId=${userId}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch integrations');
+  }
+  return response.json();
+};
+
+export const getGoogleAuthUrl = async (service: 'google_ads' | 'google_analytics') => {
+  const response = await fetch(`/api/auth/google/${service}`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to get authentication URL for ${service}`);
+  }
+  return response.json();
+};
