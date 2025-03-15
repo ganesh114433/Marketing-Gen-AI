@@ -506,6 +506,13 @@ export class PredictionService {
     if (!bigqueryClient || !storageClient) {
       throw new Error('Google Cloud clients not available for ETL processing');
     }
+
+    // Enable real-time streaming for immediate data availability
+    const streamingOptions = {
+      raw: true,
+      maxRetries: 3,
+      ignoreUnknownValues: false
+    };
     
     try {
       console.log(`[prediction] Processing ETL with Google Cloud services`);
@@ -542,7 +549,7 @@ export class PredictionService {
         const dataset = bigqueryClient.dataset(datasetId);
         const table = dataset.table(tableId);
         
-        await table.insert(transformedData);
+        await table.insert(transformedData, streamingOptions);
         console.log(`[prediction] Data written to BigQuery table ${config.destinationPath}`);
       } else if (config.destinationType === 'storage') {
         // Destination is a GCS file

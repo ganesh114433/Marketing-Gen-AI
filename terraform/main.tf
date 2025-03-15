@@ -683,7 +683,14 @@ resource "google_bigquery_connection" "looker_connection" {
   friendly_name = "Looker Studio Connection"
   description = "Connection to enable Looker Studio to access marketing data"
   
-  cloud_resource {}
+  cloud_resource {
+    service_account_id = google_service_account.app_service_account.email
+  }
+
+  properties = {
+    "enableRealTimeData" = "true"
+    "refreshSchedule" = "AUTO"
+  }
   
   depends_on = [google_project_service.data_services]
 }

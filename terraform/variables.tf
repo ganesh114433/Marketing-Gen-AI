@@ -341,6 +341,18 @@ variable "enable_bigquery_ml" {
   default     = false
 }
 
+variable "enable_bigquery_streaming" {
+  description = "Enable BigQuery streaming for real-time ETL"
+  type        = bool
+  default     = true
+}
+
+variable "bq_stream_buffer_mb" {
+  description = "BigQuery streaming buffer size in MB"
+  type        = number
+  default     = 100
+}
+
 variable "enable_looker_studio" {
   description = "Enable Looker Studio for data visualization"
   type        = bool
