@@ -50,10 +50,54 @@ A comprehensive marketing automation platform that leverages AI for content gene
 
 ## Google Cloud Setup
 
-1. **Project Creation**
+1. **Project Creation & API Configuration**
    - Create a new GCP project
-   - Enable required APIs (Cloud Run, BigQuery, Vertex AI)
-   - Set up service account with necessary permissions
+   - Enable required APIs:
+     - Google Analytics Admin API
+     - Google Analytics Data API
+     - Google Ads API
+     - BigQuery API
+     - Vertex AI API
+     - Cloud Run API
+
+2. **Google Analytics 4 Setup**
+   - Create a GA4 property in Google Analytics
+   - Configure your measurement ID (`G-XXXXXXXXXX`)
+   - Set up data streams for web/app
+   - Enable BigQuery linking:
+     ```
+     GA4 Property → Admin → BigQuery Links → Link
+     ```
+   - Configure custom dimensions and metrics for marketing insights
+
+3. **Configuration Updates**
+   Update `terraform/config.auto.tfvars`:
+   ```hcl
+   # Google Analytics Configuration
+   google_analytics = {
+     measurement_id     = "G-XXXXXXXXXX"
+     property_id       = "XXXXXXXXX"
+     stream_id         = "XXXXXXXXX"
+     bigquery_export   = true
+     export_dataset    = "analytics_data"
+     custom_dimensions = ["campaign_id", "source_medium", "content_type"]
+   }
+
+   # Google Ads Configuration
+   google_ads = {
+     customer_id       = "XXX-XXX-XXXX"
+     developer_token   = "XXXXXXXXX"
+     refresh_token    = "XXXXXXXXX"
+     linked_analytics = true
+   }
+   ```
+
+4. **Service Account Setup**
+   - Create a service account with these roles:
+     - BigQuery Data Viewer
+     - BigQuery Job User
+     - Analytics Viewer
+     - Analytics Data Analyst
 
 2. **Infrastructure Setup**
    ```bash
@@ -127,6 +171,30 @@ A comprehensive marketing automation platform that leverages AI for content gene
    - IAM role setup
    - Resource access control
    - Least privilege principles
+
+## Looker Studio Integration
+
+1. **Data Source Configuration**
+   - Connect BigQuery datasets:
+     ```
+     marketing_data.campaign_metrics
+     marketing_data.user_behavior
+     analytics_data.events_*
+     ```
+   - Configure refresh settings (15 min recommended)
+   - Set up data joins on campaign_id and date dimensions
+
+2. **Dashboard Templates**
+   - Marketing Performance Overview
+   - Campaign Attribution Analysis
+   - User Journey Analysis
+   - ROI Tracking Dashboard
+   - Cross-Platform Performance
+
+3. **Custom Metrics Setup**
+   - Configure calculated fields
+   - Set up custom dimensions
+   - Create blended data views
 
 ## Monitoring and Maintenance
 
