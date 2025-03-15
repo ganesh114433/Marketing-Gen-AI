@@ -552,14 +552,30 @@ export class PredictionService {
         await table.insert(transformedData, streamingOptions);
         console.log(`[prediction] Data written to BigQuery table ${config.destinationPath}`);
       } else if (config.destinationType === 'storage') {
-        // Destination is a GCS file
         const [bucketName, ...objectPathParts] = config.destinationPath.split('/');
         const objectPath = objectPathParts.join('/');
+        const timestamp = new Date().toISOString().split('T')[0];
         
-        await storageClient.bucket(bucketName).file(objectPath).save(
+        // Store raw data
+        const rawDataPath = `raw/${timestamp}-${objectPath}`;
+        await storageClient.bucket(bucketName).file(rawDataPath).save(
+          JSON.stringify(sourceData, null, 2)
+        );
+        console.log(`[prediction] Raw data written to GCS path ${rawDataPath}`);
+        
+        // Store processed data (after initial transformations)
+        const processedDataPath = `processed/${timestamp}-${objectPath}`;
+        await storageClient.bucket(bucketName).file(processedDataPath).save(
           JSON.stringify(transformedData, null, 2)
         );
-        console.log(`[prediction] Data written to GCS file ${config.destinationPath}`);
+        console.log(`[prediction] Processed data written to GCS path ${processedDataPath}`);
+        
+        // Store final transformed data
+        const transformedDataPath = `transformed/${timestamp}-${objectPath}`;
+        await storageClient.bucket(bucketName).file(transformedDataPath).save(
+          JSON.stringify(transformedData, null, 2)
+        );
+        console.log(`[prediction] Transformed data written to GCS path ${transformedDataPath}`);
       }
       
       return true;

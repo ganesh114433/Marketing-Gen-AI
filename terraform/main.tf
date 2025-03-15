@@ -160,15 +160,15 @@ resource "google_cloud_run_service_iam_member" "public_access" {
   member   = "allUsers"
 }
 
-# Create a GCS bucket for analytics data
-resource "google_storage_bucket" "analytics_data_bucket" {
-  name          = "${local.bucket_prefix}-marketing-analytics"
+# Create GCS buckets for data storage
+resource "google_storage_bucket" "data_lake_bucket" {
+  name          = "${local.bucket_prefix}-data-lake"
   location      = var.region
   force_destroy = var.bucket_force_destroy
   
   labels        = merge(local.common_labels, {
-    data_type   = "analytics"
-    purpose     = "marketing"
+    data_type   = "data_lake"
+    purpose     = "analytics"
   })
   
   # Enable versioning for recovery
@@ -176,10 +176,10 @@ resource "google_storage_bucket" "analytics_data_bucket" {
     enabled = true
   }
   
-  # Set lifecycle rules to manage old data
+  # Set lifecycle rules for raw data
   lifecycle_rule {
     condition {
-      age = 90 # days
+      age = 365 # days
     }
     action {
       type = "SetStorageClass"
@@ -187,20 +187,29 @@ resource "google_storage_bucket" "analytics_data_bucket" {
     }
   }
   
-  # Optional: Configure object lifecycle to automatically delete old data
-  lifecycle_rule {
-    condition {
-      age = 365 # days
-    }
-    action {
-      type = "Delete"
-    }
-  }
-  
   # Enable uniform bucket-level access
   uniform_bucket_level_access = true
   
   depends_on = [google_project_service.required_services]
+}
+
+# Create folders (prefixes) in the data lake bucket
+resource "google_storage_bucket_object" "raw_data_folder" {
+  name          = "raw/"
+  content       = " "  # Empty content for folder creation
+  bucket        = google_storage_bucket.data_lake_bucket.name
+}
+
+resource "google_storage_bucket_object" "processed_data_folder" {
+  name          = "processed/"
+  content       = " "  # Empty content for folder creation
+  bucket        = google_storage_bucket.data_lake_bucket.name
+}
+
+resource "google_storage_bucket_object" "transformed_data_folder" {
+  name          = "transformed/"
+  content       = " "  # Empty content for folder creation
+  bucket        = google_storage_bucket.data_lake_bucket.name
 }
 
 # Create a BigQuery dataset for marketing analytics
