@@ -22,6 +22,27 @@ provider "google-beta" {
   region  = var.region
 }
 
+# Local variables for resource naming and tagging
+locals {
+  # Standard naming convention: {prefix}-{client_name}-{environment}-{resource_type}
+  resource_name_prefix = "${var.resource_prefix}-${var.client_name}-${var.client_environment}"
+  
+  # Resource-specific naming patterns
+  bucket_prefix = "${local.resource_name_prefix}-bucket"
+  dataset_prefix = "${local.resource_name_prefix}-dataset"
+  model_prefix = "${local.resource_name_prefix}-model"
+  service_prefix = "${local.resource_name_prefix}-service"
+  
+  # Common tags for all resources
+  common_labels = {
+    client        = var.client_name
+    environment   = var.client_environment
+    managed_by    = "terraform"
+    application   = var.app_name
+    created_date  = formatdate("YYYY-MM-DD", timestamp())
+  }
+}
+
 # Enable required APIs
 resource "google_project_service" "required_services" {
   for_each = toset([
@@ -141,9 +162,14 @@ resource "google_cloud_run_service_iam_member" "public_access" {
 
 # Create a GCS bucket for analytics data
 resource "google_storage_bucket" "analytics_data_bucket" {
-  name          = "${var.project_id}-marketing-analytics"
+  name          = "${local.bucket_prefix}-marketing-analytics"
   location      = var.region
   force_destroy = var.bucket_force_destroy
+  
+  labels        = merge(local.common_labels, {
+    data_type   = "analytics"
+    purpose     = "marketing"
+  })
   
   # Enable versioning for recovery
   versioning {
@@ -179,9 +205,9 @@ resource "google_storage_bucket" "analytics_data_bucket" {
 
 # Create a BigQuery dataset for marketing analytics
 resource "google_bigquery_dataset" "marketing_analytics_dataset" {
-  dataset_id                  = "marketing_analytics"
-  friendly_name               = "Marketing Analytics Dataset"
-  description                 = "Dataset for marketing analytics and reporting"
+  dataset_id                  = "${replace(local.dataset_prefix, "-", "_")}_marketing_analytics"
+  friendly_name               = "${var.client_name} Marketing Analytics Dataset"
+  description                 = "Dataset for marketing analytics and reporting for ${var.client_name}"
   location                    = var.region
   delete_contents_on_destroy  = var.dataset_delete_contents
 
@@ -194,10 +220,11 @@ resource "google_bigquery_dataset" "marketing_analytics_dataset" {
     user_by_email = google_service_account.app_service_account.email
   }
   
-  # Optional: Add labels for resource organization
-  labels = {
-    environment = var.environment
-  }
+  # Use consistent labels across resources
+  labels = merge(local.common_labels, {
+    data_type = "analytics"
+    purpose   = "marketing"
+  })
   
   depends_on = [google_project_service.required_services]
 }
@@ -427,9 +454,14 @@ resource "google_project_service" "ai_apis" {
 # Vertex AI Dataset for marketing performance prediction
 resource "google_vertex_ai_dataset" "marketing_performance_dataset" {
   count        = var.enable_vertex_ai && var.enable_marketing_performance_prediction ? 1 : 0
-  display_name = "marketing-performance-dataset"
+  display_name = "${local.model_prefix}-marketing-performance"
   metadata_schema_uri = "gs://google-cloud-aiplatform/schema/dataset/metadata/tabular_1.0.0.yaml"
   region       = var.vertex_ai_region
+  
+  labels = merge(local.common_labels, {
+    purpose = "marketing_prediction"
+    data_type = "tabular"
+  })
   
   depends_on = [google_project_service.ai_apis]
 }
@@ -437,9 +469,14 @@ resource "google_vertex_ai_dataset" "marketing_performance_dataset" {
 # Google Cloud Storage bucket for model artifacts
 resource "google_storage_bucket" "model_artifacts_bucket" {
   count         = var.enable_vertex_ai && var.enable_custom_prediction_models ? 1 : 0
-  name          = "${var.project_id}-model-artifacts"
+  name          = "${local.bucket_prefix}-model-artifacts"
   location      = var.region
   force_destroy = var.bucket_force_destroy
+  
+  labels        = merge(local.common_labels, {
+    data_type   = "model"
+    purpose     = "ai_artifacts"
+  })
   
   # Enable versioning for model versions
   versioning {
@@ -547,9 +584,14 @@ resource "google_bigquery_table" "campaign_performance_model" {
 # Google Cloud Dataflow templates bucket
 resource "google_storage_bucket" "dataflow_templates_bucket" {
   count         = var.enable_dataflow ? 1 : 0
-  name          = "${var.project_id}-dataflow-templates"
+  name          = "${local.bucket_prefix}-dataflow-templates"
   location      = var.region
   force_destroy = var.bucket_force_destroy
+  
+  labels        = merge(local.common_labels, {
+    data_type   = "dataflow"
+    purpose     = "etl_templates"
+  })
   
   depends_on = [google_project_service.data_services]
 }
@@ -557,9 +599,14 @@ resource "google_storage_bucket" "dataflow_templates_bucket" {
 # Bucket for ETL scripts and assets
 resource "google_storage_bucket" "etl_assets_bucket" {
   count         = var.enable_dataflow || var.enable_dataproc ? 1 : 0
-  name          = "${var.project_id}-etl-assets"
+  name          = "${local.bucket_prefix}-etl-assets"
   location      = var.region
   force_destroy = var.bucket_force_destroy
+  
+  labels        = merge(local.common_labels, {
+    data_type   = "etl"
+    purpose     = "data_processing"
+  })
   
   depends_on = [google_project_service.data_services]
 }
