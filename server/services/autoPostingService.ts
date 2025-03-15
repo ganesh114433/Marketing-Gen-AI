@@ -223,19 +223,49 @@ export class AutoPostingService {
   private async postToSocialMedia(event: CalendarEvent, content: ContentEntry): Promise<void> {
     log(`Posting to ${event.platform || 'unknown platform'}: "${content.title}"`, 'autopost');
     
-    // Simulate posting to different platforms
     if (!event.platform) {
       log('No platform specified, skipping posting', 'autopost');
       return;
     }
-    
-    // In a real app, we'd use platform-specific SDKs or APIs
-    // For demo purposes, we simulate successful posting
-    
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-    
-    // Simulate network delay
-    await delay(500);
+
+    // Generate image for social media post if needed
+    let imageUrl: string | undefined;
+    if (content.type === 'social' || content.type === 'ad') {
+      const imageOptions = {
+        prompt: `Marketing image for: ${content.title}`,
+        style: 'professional',
+        size: 'large'
+      };
+      
+      try {
+        const image = await generateMarketingImage(imageOptions);
+        imageUrl = image.url;
+      } catch (error) {
+        log(`Failed to generate image: ${error}`, 'autopost');
+      }
+    }
+
+    // Post to specific platforms with image
+    try {
+      switch (event.platform.toLowerCase()) {
+        case 'facebook':
+          await this.postToFacebook(content, imageUrl);
+          break;
+        case 'instagram':
+          await this.postToInstagram(content, imageUrl);
+          break;
+        case 'twitter':
+          await this.postToTwitter(content, imageUrl);
+          break;
+        case 'linkedin':
+          await this.postToLinkedIn(content, imageUrl);
+          break;
+      }
+      log(`Successfully posted to ${event.platform} with image`, 'autopost');
+    } catch (error) {
+      log(`Failed to post to ${event.platform}: ${error}`, 'autopost');
+      throw error;
+    }
     
     log(`Successfully posted to ${event.platform}: "${content.title}"`, 'autopost');
     
@@ -245,3 +275,23 @@ export class AutoPostingService {
 
 // Export the singleton instance
 export const autoPostingService = AutoPostingService.getInstance();
+  private async postToFacebook(content: ContentEntry, imageUrl?: string) {
+    // Implement Facebook SDK posting
+    // For demo, we'll log the action
+    log(`Posted to Facebook: ${content.title} ${imageUrl ? 'with image' : ''}`, 'autopost');
+  }
+
+  private async postToInstagram(content: ContentEntry, imageUrl?: string) {
+    // Implement Instagram SDK posting
+    log(`Posted to Instagram: ${content.title} ${imageUrl ? 'with image' : ''}`, 'autopost');
+  }
+
+  private async postToTwitter(content: ContentEntry, imageUrl?: string) {
+    // Implement Twitter SDK posting
+    log(`Posted to Twitter: ${content.title} ${imageUrl ? 'with image' : ''}`, 'autopost');
+  }
+
+  private async postToLinkedIn(content: ContentEntry, imageUrl?: string) {
+    // Implement LinkedIn SDK posting
+    log(`Posted to LinkedIn: ${content.title} ${imageUrl ? 'with image' : ''}`, 'autopost');
+  }
