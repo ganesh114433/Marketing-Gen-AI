@@ -24,6 +24,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </main>
       </div>
+      <ChatButton />
     </div>
   );
 };

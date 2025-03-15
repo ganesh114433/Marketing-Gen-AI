@@ -264,6 +264,43 @@ Common issues and solutions:
 - Authentication issues
 - Deployment problems
 
+## AI Chatbot Integration
+
+The platform includes a self-training AI chatbot that provides real-time marketing insights:
+
+### Data Collection & Training Pipeline
+
+1. **Real-time Data Integration**
+   - Automatic collection of marketing metrics
+   - Integration with Google Analytics, Ads, and Salesforce
+   - Real-time ETL processing via BigQuery
+
+2. **Automated Training Process**
+   - Continuous data preprocessing using Cloud Functions
+   - Daily model updates using Vertex AI
+   - Automated fine-tuning with new marketing data
+
+3. **Knowledge Base Updates**
+   - Automatic indexing of new marketing data
+   - Real-time vector embeddings for semantic search
+   - Dynamic context window updates
+
+### Training Architecture
+
+```
+Marketing Data → ETL Pipeline → BigQuery → Vertex AI
+       ↓             ↓            ↓           ↓
+   Raw Data → Preprocessing → Training Set → Model Update
+       ↓                                      ↓
+   Insights ←——————— Chatbot Interface ←—— Deployment
+```
+
+The chatbot automatically:
+- Processes new marketing data every 6 hours
+- Updates its knowledge base with new insights
+- Retrains on new patterns and trends
+- Maintains historical context for predictions
+
 ## Contact and Support
 
 For issues and feature requests:
