@@ -236,10 +236,18 @@ export class PredictionService {
    */
   private async predictWithOpenAI(predictionId: string, request: CampaignPredictionRequest): Promise<CampaignPredictionResponse> {
     try {
-      // Get historical campaign data to use as context
+      // Use BigQuery for predictions
+      const prediction = await bigQueryETLService.getPrediction({
+        platform: request.platform,
+        campaignType: request.objective,
+        budget: request.budget,
+        impressions: request.historicalImpressions || 0,
+        clicks: request.historicalClicks || 0,
+        cost: request.budget
+      });
+
+      // Get additional context from historical data
       const historicalMetrics = await this.getHistoricalCampaignMetrics(request.platform);
-      
-      // Get market trends and seasonality data
       const marketTrends = await this.getMarketTrendsData();
       const seasonality = await this.getSeasonalityFactors(request.startDate, request.endDate);
       
