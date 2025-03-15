@@ -9,3 +9,8 @@ min_instance_count = 1
 max_instance_count = 3
 cpu_limit          = "1"
 memory_limit       = "512Mi"
+
+# Storage parameters
+bucket_force_destroy   = false  # Set to true to force delete bucket on terraform destroy
+dataset_delete_contents = false # Set to true to delete all tables on dataset destroy
+environment            = "production"

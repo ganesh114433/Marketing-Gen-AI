@@ -29,7 +29,9 @@ resource "google_project_service" "required_services" {
     "artifactregistry.googleapis.com",
     "cloudbuild.googleapis.com",
     "iam.googleapis.com",
-    "secretmanager.googleapis.com"
+    "secretmanager.googleapis.com",
+    "storage.googleapis.com",
+    "bigquery.googleapis.com"
   ])
 
   project = var.project_id
@@ -137,7 +139,276 @@ resource "google_cloud_run_service_iam_member" "public_access" {
   member   = "allUsers"
 }
 
+# Create a GCS bucket for analytics data
+resource "google_storage_bucket" "analytics_data_bucket" {
+  name          = "${var.project_id}-marketing-analytics"
+  location      = var.region
+  force_destroy = var.bucket_force_destroy
+  
+  # Enable versioning for recovery
+  versioning {
+    enabled = true
+  }
+  
+  # Set lifecycle rules to manage old data
+  lifecycle_rule {
+    condition {
+      age = 90 # days
+    }
+    action {
+      type = "SetStorageClass"
+      storage_class = "COLDLINE"
+    }
+  }
+  
+  # Optional: Configure object lifecycle to automatically delete old data
+  lifecycle_rule {
+    condition {
+      age = 365 # days
+    }
+    action {
+      type = "Delete"
+    }
+  }
+  
+  # Enable uniform bucket-level access
+  uniform_bucket_level_access = true
+  
+  depends_on = [google_project_service.required_services]
+}
+
+# Create a BigQuery dataset for marketing analytics
+resource "google_bigquery_dataset" "marketing_analytics_dataset" {
+  dataset_id                  = "marketing_analytics"
+  friendly_name               = "Marketing Analytics Dataset"
+  description                 = "Dataset for marketing analytics and reporting"
+  location                    = var.region
+  delete_contents_on_destroy  = var.dataset_delete_contents
+
+  # Optional: Set expiration for tables (in milliseconds)
+  default_table_expiration_ms = 7776000000 # 90 days
+  
+  # Enable access control
+  access {
+    role          = "OWNER"
+    user_by_email = google_service_account.app_service_account.email
+  }
+  
+  # Optional: Add labels for resource organization
+  labels = {
+    environment = var.environment
+  }
+  
+  depends_on = [google_project_service.required_services]
+}
+
+# Grant the service account access to the GCS bucket
+resource "google_storage_bucket_iam_member" "app_storage_access" {
+  bucket = google_storage_bucket.analytics_data_bucket.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${google_service_account.app_service_account.email}"
+}
+
+# Grant the service account access to BigQuery
+resource "google_project_iam_member" "app_bigquery_access" {
+  project = var.project_id
+  role    = "roles/bigquery.dataEditor"
+  member  = "serviceAccount:${google_service_account.app_service_account.email}"
+}
+
+# Create a BigQuery table for marketing metrics
+resource "google_bigquery_table" "marketing_metrics_table" {
+  dataset_id = google_bigquery_dataset.marketing_analytics_dataset.dataset_id
+  table_id   = "marketing_metrics"
+  
+  time_partitioning {
+    type = "DAY"
+    field = "date"
+  }
+  
+  schema = <<EOF
+[
+  {
+    "name": "date",
+    "type": "DATE",
+    "mode": "REQUIRED",
+    "description": "The date of the marketing metrics"
+  },
+  {
+    "name": "platform",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Marketing platform (e.g., Google Ads, Facebook, Instagram)"
+  },
+  {
+    "name": "campaign_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "ID of the marketing campaign"
+  },
+  {
+    "name": "campaign_name",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Name of the marketing campaign"
+  },
+  {
+    "name": "impressions",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of ad impressions"
+  },
+  {
+    "name": "clicks",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of ad clicks"
+  },
+  {
+    "name": "cost",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Campaign cost in USD"
+  },
+  {
+    "name": "conversions",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of conversions"
+  },
+  {
+    "name": "conversion_value",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Total conversion value in USD"
+  },
+  {
+    "name": "ctr",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Click-through rate (clicks / impressions)"
+  },
+  {
+    "name": "cpc",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Cost per click (cost / clicks)"
+  },
+  {
+    "name": "roas",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Return on ad spend (conversion_value / cost)"
+  }
+]
+EOF
+
+  depends_on = [google_bigquery_dataset.marketing_analytics_dataset]
+}
+
+# Create a BigQuery table for content performance
+resource "google_bigquery_table" "content_performance_table" {
+  dataset_id = google_bigquery_dataset.marketing_analytics_dataset.dataset_id
+  table_id   = "content_performance"
+  
+  time_partitioning {
+    type = "DAY"
+    field = "date"
+  }
+  
+  schema = <<EOF
+[
+  {
+    "name": "date",
+    "type": "DATE",
+    "mode": "REQUIRED",
+    "description": "The date of content publication"
+  },
+  {
+    "name": "content_id",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "ID of the content"
+  },
+  {
+    "name": "content_title",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Title of the content"
+  },
+  {
+    "name": "content_type",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Type of content (blog, social post, email, etc.)"
+  },
+  {
+    "name": "platform",
+    "type": "STRING",
+    "mode": "REQUIRED",
+    "description": "Platform where content was published"
+  },
+  {
+    "name": "views",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of content views"
+  },
+  {
+    "name": "likes",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of likes/reactions"
+  },
+  {
+    "name": "shares",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of shares/retweets"
+  },
+  {
+    "name": "comments",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of comments"
+  },
+  {
+    "name": "clicks",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of clicks on links in content"
+  },
+  {
+    "name": "conversions",
+    "type": "INTEGER",
+    "mode": "NULLABLE",
+    "description": "Number of conversions attributed to content"
+  },
+  {
+    "name": "engagement_rate",
+    "type": "FLOAT",
+    "mode": "NULLABLE",
+    "description": "Engagement rate ((likes + shares + comments) / views)"
+  }
+]
+EOF
+
+  depends_on = [google_bigquery_dataset.marketing_analytics_dataset]
+}
+
 # Output the service URL
 output "service_url" {
   value = google_cloud_run_service.app_service.status[0].url
+}
+
+# Output the GCS bucket name
+output "analytics_bucket_name" {
+  value = google_storage_bucket.analytics_data_bucket.name
+  description = "The name of the GCS bucket for marketing analytics data"
+}
+
+# Output the BigQuery dataset ID
+output "bigquery_dataset_id" {
+  value = google_bigquery_dataset.marketing_analytics_dataset.dataset_id
+  description = "The ID of the BigQuery dataset for marketing analytics"
 }

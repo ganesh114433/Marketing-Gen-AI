@@ -49,3 +49,21 @@ variable "memory_limit" {
   type        = string
   default     = "512Mi"
 }
+
+variable "bucket_force_destroy" {
+  description = "When deleting the bucket, delete all objects in the bucket"
+  type        = bool
+  default     = false
+}
+
+variable "dataset_delete_contents" {
+  description = "When deleting the dataset, delete all tables in the dataset"
+  type        = bool
+  default     = false
+}
+
+variable "environment" {
+  description = "Environment label (e.g. prod, staging, dev)"
+  type        = string
+  default     = "production"
+}
