@@ -20,6 +20,8 @@ import {
   getAutomationActivity 
 } from "./api/automation";
 import { ZodError } from "zod";
+import { salesPredictionService } from "./api/salesPrediction"; // Import the sales prediction service
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
@@ -67,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedRequest = contentGenerationSchema.parse(req.body);
       const generatedContent = await generateContent(validatedRequest);
-      
+
       res.json({
         content: generatedContent,
       });
@@ -92,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       const contents = await storage.getContentEntriesByUserId(userId);
       res.json(contents);
     } catch (error) {
@@ -117,7 +119,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedRequest = imageGenerationSchema.parse(req.body);
       const generatedImage = await generateImage(validatedRequest);
-      
+
       res.json({
         imageUrl: generatedImage.url,
       });
@@ -142,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       const images = await storage.getImageEntriesByUserId(userId);
       res.json(images);
     } catch (error) {
@@ -167,7 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       const events = await storage.getCalendarEventsByUserId(userId);
       res.json(events);
     } catch (error) {
@@ -194,7 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
-      
+
       const updatedEvent = await storage.updateCalendarEvent(id, req.body);
       res.json(updatedEvent);
     } catch (error) {
@@ -209,7 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       const metrics = await storage.getCampaignMetricsByUserId(userId);
       res.json(metrics);
     } catch (error) {
@@ -224,7 +226,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (service !== 'google_ads' && service !== 'google_analytics') {
         return res.status(400).json({ message: "Invalid service" });
       }
-      
+
       const authUrl = getAuthUrl(service);
       res.json({ authUrl });
     } catch (error) {
@@ -238,14 +240,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!code || !state) {
         return res.status(400).json({ message: "Missing code or state" });
       }
-      
+
       const service = state.toString();
       if (service !== 'google_ads' && service !== 'google_analytics') {
         return res.status(400).json({ message: "Invalid service" });
       }
-      
+
       const tokens = await getTokensFromCode(code.toString());
-      
+
       // In a real app, you would associate these tokens with a user
       // For this example, we'll just return them to the client
       res.json({
@@ -263,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       const integrations = await storage.getIntegrationsByUserId(userId);
       res.json(integrations);
     } catch (error) {
@@ -287,12 +289,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       const integrations = await storage.getIntegrationsByUserIdAndService(userId, 'google_ads');
       if (integrations.length === 0) {
         return res.status(404).json({ message: "Google Ads integration not found" });
       }
-      
+
       const adsData = await getGoogleAdsData(integrations[0]);
       res.json(adsData);
     } catch (error) {
@@ -307,12 +309,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       const integrations = await storage.getIntegrationsByUserIdAndService(userId, 'google_analytics');
       if (integrations.length === 0) {
         return res.status(404).json({ message: "Google Analytics integration not found" });
       }
-      
+
       const analyticsData = await getGoogleAnalyticsData(integrations[0]);
       res.json(analyticsData);
     } catch (error) {
@@ -327,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Valid userId is required" });
       }
-      
+
       // Get all the data needed for the dashboard
       const [contentEntries, imageEntries, calendarEvents, campaignMetrics] = await Promise.all([
         storage.getContentEntriesByUserId(userId),
@@ -335,17 +337,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getCalendarEventsByUserId(userId),
         storage.getCampaignMetricsByUserId(userId)
       ]);
-      
+
       // Calculate campaign performance (example formula)
       const totalImpressions = campaignMetrics.reduce((sum, metric) => sum + (metric.impressions || 0), 0);
       const totalClicks = campaignMetrics.reduce((sum, metric) => sum + (metric.clicks || 0), 0);
       const totalConversions = campaignMetrics.reduce((sum, metric) => sum + (metric.conversions || 0), 0);
       const totalAdSpend = campaignMetrics.reduce((sum, metric) => sum + (metric.adSpend || 0), 0);
-      
+
       const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
       const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0;
       const costPerConversion = totalConversions > 0 ? totalAdSpend / totalConversions : 0;
-      
+
       // Filter upcoming calendar events
       const now = new Date();
       const upcomingEvents = calendarEvents
@@ -359,7 +361,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return aDate.getTime() - bDate.getTime();
         })
         .slice(0, 5);
-      
+
       // Recent content
       const recentContent = contentEntries
         .filter(content => content.createdAt instanceof Date)
@@ -369,7 +371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return bDate.getTime() - aDate.getTime();
         })
         .slice(0, 5);
-      
+
       res.json({
         metrics: {
           campaignPerformance: {
@@ -419,9 +421,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   router.post("/automation/check-events", forceCheckEvents);
   router.get("/automation/activity", getAutomationActivity);
 
+  // Sales prediction routes
+  router.get('/api/sales/predictions', async (req, res) => {
+    try {
+      const { startDate = '7daysAgo', endDate = 'today' } = req.query;
+      const predictions = await salesPredictionService.predictSales(
+        req.user?.tokens,
+        startDate as string,
+        endDate as string
+      );
+      res.json(predictions);
+    } catch (error) {
+      console.error('Error getting sales predictions:', error);
+      res.status(500).json({ error: 'Failed to get sales predictions' });
+    }
+  });
+
   // Register all routes with the /api prefix
   app.use("/api", router);
-  
+
   // API error handling
   app.use("/api", handleApiError);
 
