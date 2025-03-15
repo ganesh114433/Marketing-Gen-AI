@@ -67,3 +67,163 @@ variable "environment" {
   type        = string
   default     = "production"
 }
+
+# Integration configuration variables
+variable "enable_google_analytics" {
+  description = "Enable Google Analytics integration"
+  type        = bool
+  default     = false
+}
+
+variable "google_client_id" {
+  description = "Google OAuth Client ID for API integrations"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth Client Secret for API integrations"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_salesforce" {
+  description = "Enable Salesforce CRM integration"
+  type        = bool
+  default     = false
+}
+
+variable "salesforce_client_id" {
+  description = "Salesforce OAuth Consumer Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "salesforce_client_secret" {
+  description = "Salesforce OAuth Consumer Secret"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_hubspot" {
+  description = "Enable HubSpot CRM integration"
+  type        = bool
+  default     = false
+}
+
+variable "hubspot_api_key" {
+  description = "HubSpot API Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_facebook" {
+  description = "Enable Facebook Marketing API integration"
+  type        = bool
+  default     = false
+}
+
+variable "facebook_app_id" {
+  description = "Facebook App ID for Marketing API"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "facebook_app_secret" {
+  description = "Facebook App Secret for Marketing API"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_twitter" {
+  description = "Enable Twitter API integration"
+  type        = bool
+  default     = false
+}
+
+variable "twitter_api_key" {
+  description = "Twitter API Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "twitter_api_secret" {
+  description = "Twitter API Secret"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_linkedin" {
+  description = "Enable LinkedIn Marketing API integration"
+  type        = bool
+  default     = false
+}
+
+variable "linkedin_client_id" {
+  description = "LinkedIn Client ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "linkedin_client_secret" {
+  description = "LinkedIn Client Secret"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_mailchimp" {
+  description = "Enable Mailchimp integration"
+  type        = bool
+  default     = false
+}
+
+variable "mailchimp_api_key" {
+  description = "Mailchimp API Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_shopify" {
+  description = "Enable Shopify integration"
+  type        = bool
+  default     = false
+}
+
+variable "shopify_api_key" {
+  description = "Shopify API Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "shopify_api_secret" {
+  description = "Shopify API Secret"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "enable_stripe" {
+  description = "Enable Stripe payment processing integration"
+  type        = bool
+  default     = false
+}
+
+variable "stripe_api_key" {
+  description = "Stripe API Key"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

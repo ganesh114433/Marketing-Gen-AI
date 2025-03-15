@@ -112,24 +112,32 @@ export const insertCampaignMetricsSchema = createInsertSchema(campaignMetrics).p
 export const integrations = pgTable("integrations", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  service: text("service").notNull(), // google_ads, google_analytics, facebook, instagram
+  service: text("service").notNull(), // google_ads, google_analytics, facebook, instagram, salesforce, etc.
+  provider: text("provider").notNull(), // google, facebook, salesforce, hubspot, etc.
+  integrationType: text("integration_type").notNull(), // analytics, ads, crm, erp, social, etc.
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   tokenExpiry: timestamp("token_expiry"),
   accountId: text("account_id"),
-  status: text("status").notNull().default("disconnected"), // connected, disconnected
+  status: text("status").notNull().default("disconnected"), // connected, disconnected, pending
   lastSynced: timestamp("last_synced"),
+  config: json("config"), // Flexible JSON field for service-specific configuration
+  credentials: json("credentials"), // Securely stored credentials (encrypted in production)
 });
 
 export const insertIntegrationSchema = createInsertSchema(integrations).pick({
   userId: true,
   service: true,
+  provider: true,
+  integrationType: true,
   accessToken: true,
   refreshToken: true,
   tokenExpiry: true,
   accountId: true,
   status: true,
   lastSynced: true,
+  config: true,
+  credentials: true,
 });
 
 // Export all types
