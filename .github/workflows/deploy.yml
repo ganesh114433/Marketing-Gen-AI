@@ -1,0 +1,82 @@
+name: Deploy to Google Cloud
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # Needed for auth with Google Cloud
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  APP_NAME: marketing-automation
+  REGION: us-central1
+
+jobs:
+  deploy:
+    name: Deploy to Google Cloud Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Google Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGION }}-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.APP_NAME }}-repo/${{ env.APP_NAME }}:${{ github.sha }},${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.APP_NAME }}-repo/${{ env.APP_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.4.6
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Create terraform.tfvars
+        working-directory: ./terraform
+        run: |
+          cat > terraform.tfvars << EOF
+          project_id      = "${{ env.PROJECT_ID }}"
+          region          = "${{ env.REGION }}"
+          app_name        = "${{ env.APP_NAME }}"
+          container_image = "${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.APP_NAME }}-repo/${{ env.APP_NAME }}:${{ github.sha }}"
+          openai_api_key  = "${{ secrets.OPENAI_API_KEY }}"
+          EOF
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
+
+      - name: Display Service URL
+        working-directory: ./terraform
+        run: echo "Service deployed to $(terraform output -raw service_url)"
