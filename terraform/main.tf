@@ -412,3 +412,287 @@ output "bigquery_dataset_id" {
   value = google_bigquery_dataset.marketing_analytics_dataset.dataset_id
   description = "The ID of the BigQuery dataset for marketing analytics"
 }
+
+# AI and ML resources
+resource "google_project_service" "ai_apis" {
+  count   = var.enable_google_ai || var.enable_vertex_ai ? 1 : 0
+  project = var.project_id
+  service = "aiplatform.googleapis.com"
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+  depends_on                 = [google_project_service.required_services]
+}
+
+# Vertex AI Dataset for marketing performance prediction
+resource "google_vertex_ai_dataset" "marketing_performance_dataset" {
+  count        = var.enable_vertex_ai && var.enable_marketing_performance_prediction ? 1 : 0
+  display_name = "marketing-performance-dataset"
+  metadata_schema_uri = "gs://google-cloud-aiplatform/schema/dataset/metadata/tabular_1.0.0.yaml"
+  region       = var.vertex_ai_region
+  
+  depends_on = [google_project_service.ai_apis]
+}
+
+# Google Cloud Storage bucket for model artifacts
+resource "google_storage_bucket" "model_artifacts_bucket" {
+  count         = var.enable_vertex_ai && var.enable_custom_prediction_models ? 1 : 0
+  name          = "${var.project_id}-model-artifacts"
+  location      = var.region
+  force_destroy = var.bucket_force_destroy
+  
+  # Enable versioning for model versions
+  versioning {
+    enabled = true
+  }
+  
+  depends_on = [google_project_service.ai_apis]
+}
+
+# Vertex AI Model Registry for storing trained models
+resource "google_vertex_ai_model" "marketing_performance_model" {
+  count        = var.enable_vertex_ai && var.enable_marketing_performance_prediction ? 1 : 0
+  display_name = "marketing-performance-prediction-model"
+  metadata_schema_uri = "gs://google-cloud-aiplatform/schema/trainingjob/definition/automl_tabular_1.0.0.yaml"
+  region       = var.vertex_ai_region
+  
+  depends_on = [google_project_service.ai_apis]
+}
+
+# Create an AI Notebook instance for data scientists to develop custom models
+resource "google_notebooks_instance" "ai_notebook" {
+  count        = var.enable_vertex_ai && var.enable_custom_prediction_models ? 1 : 0
+  name         = "marketing-ai-notebook"
+  location     = var.region
+  machine_type = "n1-standard-4"
+  
+  vm_image {
+    project      = "deeplearning-platform-release"
+    image_family = "tf-ent-2-3-cpu"
+  }
+  
+  depends_on = [google_project_service.ai_apis]
+}
+
+# Vertex AI feature store for prediction features
+resource "google_vertex_ai_featurestore" "marketing_features" {
+  count       = var.enable_vertex_ai && var.enable_marketing_performance_prediction ? 1 : 0
+  name        = "marketing-features"
+  region      = var.vertex_ai_region
+  online_serving_config {
+    fixed_node_count = 1
+  }
+  
+  depends_on = [google_project_service.ai_apis]
+}
+
+# Feature for campaign performance prediction
+resource "google_vertex_ai_featurestore_entitytype" "campaign_entity" {
+  count          = var.enable_vertex_ai && var.enable_marketing_performance_prediction ? 1 : 0
+  featurestore   = google_vertex_ai_featurestore.marketing_features[0].name
+  entity_type_id = "campaign"
+  description    = "Campaign entity for marketing performance prediction"
+  monitoring_config {
+    snapshot_analysis {
+      disabled = false
+      monitoring_interval_days = 1
+    }
+  }
+  
+  depends_on = [google_vertex_ai_featurestore.marketing_features]
+}
+
+# Output the Vertex AI dataset ID
+output "vertex_ai_dataset_id" {
+  value = var.enable_vertex_ai && var.enable_marketing_performance_prediction ? google_vertex_ai_dataset.marketing_performance_dataset[0].name : null
+  description = "The ID of the Vertex AI dataset for marketing performance prediction"
+}
+
+# Output the model artifacts bucket name
+output "model_artifacts_bucket_name" {
+  value = var.enable_vertex_ai && var.enable_custom_prediction_models ? google_storage_bucket.model_artifacts_bucket[0].name : null
+  description = "The name of the GCS bucket for model artifacts"
+}
+
+# ETL and real-time processing resources
+resource "google_project_service" "data_services" {
+  count   = var.enable_dataflow || var.enable_pubsub || var.enable_dataproc ? 1 : 0
+  for_each = toset([
+    "dataflow.googleapis.com",
+    "pubsub.googleapis.com",
+    "dataproc.googleapis.com",
+    "datacatalog.googleapis.com",
+    "bigqueryconnection.googleapis.com",
+    "bigquerydatatransfer.googleapis.com"
+  ])
+  project = var.project_id
+  service = each.key
+
+  disable_dependent_services = false
+  disable_on_destroy         = false
+  depends_on                 = [google_project_service.required_services]
+}
+
+# BigQuery ML models
+resource "google_bigquery_table" "campaign_performance_model" {
+  count       = var.enable_bigquery_ml ? 1 : 0
+  dataset_id  = google_bigquery_dataset.marketing_analytics_dataset.dataset_id
+  table_id    = "campaign_performance_model"
+  description = "BigQuery ML model for campaign performance prediction"
+  deletion_protection = false
+
+  depends_on = [google_bigquery_dataset.marketing_analytics_dataset]
+}
+
+# Google Cloud Dataflow templates bucket
+resource "google_storage_bucket" "dataflow_templates_bucket" {
+  count         = var.enable_dataflow ? 1 : 0
+  name          = "${var.project_id}-dataflow-templates"
+  location      = var.region
+  force_destroy = var.bucket_force_destroy
+  
+  depends_on = [google_project_service.data_services]
+}
+
+# Bucket for ETL scripts and assets
+resource "google_storage_bucket" "etl_assets_bucket" {
+  count         = var.enable_dataflow || var.enable_dataproc ? 1 : 0
+  name          = "${var.project_id}-etl-assets"
+  location      = var.region
+  force_destroy = var.bucket_force_destroy
+  
+  depends_on = [google_project_service.data_services]
+}
+
+# ETL and data processing resources
+resource "google_dataproc_cluster" "etl_cluster" {
+  count      = var.enable_dataproc ? 1 : 0
+  name       = var.dataproc_cluster_name
+  region     = var.region
+  
+  cluster_config {
+    staging_bucket = google_storage_bucket.etl_assets_bucket[0].name
+    
+    master_config {
+      num_instances = 1
+      machine_type  = "n1-standard-4"
+    }
+    
+    worker_config {
+      num_instances = var.dataproc_workers
+      machine_type  = "n1-standard-4"
+    }
+    
+    software_config {
+      image_version = "2.0-debian10"
+      override_properties = {
+        "dataproc:dataproc.allow.zero.workers" = "true"
+      }
+      optional_components = ["JUPYTER"]
+    }
+  }
+  
+  depends_on = [google_project_service.data_services]
+}
+
+# Pub/Sub topics for real-time event streaming
+resource "google_pubsub_topic" "prediction_request_topic" {
+  count = var.enable_pubsub && var.enable_real_time_predictions ? 1 : 0
+  name  = var.prediction_request_topic
+  
+  depends_on = [google_project_service.data_services]
+}
+
+resource "google_pubsub_topic" "prediction_result_topic" {
+  count = var.enable_pubsub && var.enable_real_time_predictions ? 1 : 0
+  name  = var.prediction_result_topic
+  
+  depends_on = [google_project_service.data_services]
+}
+
+# Pub/Sub subscription for processing prediction requests
+resource "google_pubsub_subscription" "prediction_request_subscription" {
+  count   = var.enable_pubsub && var.enable_real_time_predictions ? 1 : 0
+  name    = "${var.prediction_request_topic}-subscription"
+  topic   = google_pubsub_topic.prediction_request_topic[0].name
+  
+  # 7 days retention
+  message_retention_duration = "604800s"
+  
+  # Process messages in order with 60 seconds timeout
+  ack_deadline_seconds = 60
+  
+  # Enable exactly-once delivery
+  enable_exactly_once_delivery = true
+  
+  depends_on = [google_pubsub_topic.prediction_request_topic]
+}
+
+# BigQuery external connection for Looker Studio
+resource "google_bigquery_connection" "looker_connection" {
+  count      = var.enable_looker_studio ? 1 : 0
+  connection_id = "looker-studio-connection"
+  location   = var.region
+  friendly_name = "Looker Studio Connection"
+  description = "Connection to enable Looker Studio to access marketing data"
+  
+  cloud_resource {}
+  
+  depends_on = [google_project_service.data_services]
+}
+
+# Data Catalog entries for datasets and ML models
+resource "google_data_catalog_entry_group" "marketing_data_group" {
+  count       = var.enable_data_catalog ? 1 : 0
+  entry_group_id = "marketing-data"
+  display_name   = "Marketing Data"
+  description    = "Group for all marketing automation data resources"
+  
+  depends_on = [google_project_service.data_services]
+}
+
+# Schema for marketing metrics data in Data Catalog
+resource "google_data_catalog_entry" "marketing_metrics_entry" {
+  count          = var.enable_data_catalog ? 1 : 0
+  entry_group    = google_data_catalog_entry_group.marketing_data_group[0].id
+  entry_id       = "marketing-metrics"
+  display_name   = "Marketing Metrics"
+  description    = "Marketing metrics data for campaigns and performance analysis"
+  
+  schema = jsonencode({
+    columns = [
+      {name = "date", type = "DATE", description = "The date of the marketing metrics"},
+      {name = "platform", type = "STRING", description = "Marketing platform"},
+      {name = "campaign_id", type = "STRING", description = "ID of the marketing campaign"},
+      {name = "impressions", type = "INTEGER", description = "Number of ad impressions"},
+      {name = "clicks", type = "INTEGER", description = "Number of ad clicks"},
+      {name = "conversions", type = "INTEGER", description = "Number of conversions"},
+      {name = "cost", type = "FLOAT", description = "Campaign cost in USD"}
+    ]
+  })
+  
+  depends_on = [google_data_catalog_entry_group.marketing_data_group]
+}
+
+# Output the ETL assets bucket name
+output "etl_assets_bucket_name" {
+  value = var.enable_dataflow || var.enable_dataproc ? google_storage_bucket.etl_assets_bucket[0].name : null
+  description = "The name of the GCS bucket for ETL assets and scripts"
+}
+
+# Output the Pub/Sub topics
+output "prediction_request_topic" {
+  value = var.enable_pubsub && var.enable_real_time_predictions ? google_pubsub_topic.prediction_request_topic[0].name : null
+  description = "The name of the Pub/Sub topic for real-time prediction requests"
+}
+
+output "prediction_result_topic" {
+  value = var.enable_pubsub && var.enable_real_time_predictions ? google_pubsub_topic.prediction_result_topic[0].name : null
+  description = "The name of the Pub/Sub topic for real-time prediction results"
+}
+
+# Output the Dataproc cluster name
+output "dataproc_cluster_name" {
+  value = var.enable_dataproc ? google_dataproc_cluster.etl_cluster[0].name : null
+  description = "The name of the Dataproc cluster for ETL processing"
+}

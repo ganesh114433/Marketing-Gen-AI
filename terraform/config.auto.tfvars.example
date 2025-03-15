@@ -1,0 +1,122 @@
+# ==========================================================
+# Marketing Automation Platform Configuration
+# ==========================================================
+# Copy this file to config.auto.tfvars and adjust the values
+# for your specific deployment requirements
+# ==========================================================
+
+# Client Information
+# ----------------------------------------------------------
+client_name        = "acme-corp"            # Used for resource naming
+client_environment = "production"           # production, staging, dev
+client_location    = "us-central1"          # GCP region
+
+# Project Settings
+# ----------------------------------------------------------
+project_id         = "your-gcp-project-id"
+app_name           = "marketing-automation"
+container_image    = "us-central1-docker.pkg.dev/your-gcp-project-id/marketing-automation-repo/marketing-automation:latest"
+
+# Resource Naming Prefix
+# ----------------------------------------------------------
+# All resources will be prefixed with this pattern: {prefix}-{client_name}-{client_environment}
+resource_prefix    = "mktauto"
+
+# API Credentials
+# ----------------------------------------------------------
+openai_api_key     = "your-openai-api-key"
+
+# Optional scaling parameters
+# ----------------------------------------------------------
+min_instance_count = 1
+max_instance_count = 3
+cpu_limit          = "1"
+memory_limit       = "512Mi"
+
+# Storage Configuration
+# ----------------------------------------------------------
+bucket_force_destroy    = false  # Set to true to force delete bucket on terraform destroy
+dataset_delete_contents = false  # Set to true to delete all tables on dataset destroy
+
+# Feature Flags - Core Features
+# ----------------------------------------------------------
+# Set to true to enable features
+enable_google_analytics             = false
+enable_google_ads                   = false
+enable_salesforce                   = false
+enable_hubspot                      = false
+enable_facebook                     = false
+enable_twitter                      = false
+enable_linkedin                     = false
+enable_instagram                    = false
+enable_mailchimp                    = false
+enable_shopify                      = false
+enable_stripe                       = false
+
+# Google AI Integration
+# ----------------------------------------------------------
+enable_google_ai                    = false
+google_ai_api_key                   = ""
+
+# Vertex AI Configuration
+# ----------------------------------------------------------
+enable_vertex_ai                    = false
+vertex_ai_region                    = "us-central1"
+enable_custom_prediction_models     = false
+prediction_model_type               = "automl"  # automl, custom, pretrained
+
+# Marketing Performance Model
+# ----------------------------------------------------------
+enable_marketing_performance_prediction = false
+marketing_model_training_dataset     = ""
+marketing_model_training_table       = ""
+marketing_model_training_frequency   = "weekly"  # daily, weekly, monthly
+
+# Data Processing
+# ----------------------------------------------------------
+enable_dataflow                     = false
+enable_pubsub                       = false
+enable_bigquery_ml                  = false
+enable_looker_studio                = false
+enable_dataproc                     = false
+dataproc_cluster_name               = "marketing-etl-cluster"
+dataproc_workers                    = 2
+enable_data_catalog                 = false
+
+# Real-time Processing
+# ----------------------------------------------------------
+enable_real_time_predictions        = false
+prediction_request_topic            = "prediction-requests"
+prediction_result_topic             = "prediction-results"
+
+# Integration Credentials
+# ----------------------------------------------------------
+# Google API
+google_client_id                    = ""
+google_client_secret                = ""
+
+# Salesforce
+salesforce_client_id                = ""
+salesforce_client_secret            = ""
+
+# Facebook
+facebook_app_id                     = ""
+facebook_app_secret                 = ""
+
+# Twitter
+twitter_api_key                     = ""
+twitter_api_secret                  = ""
+
+# LinkedIn
+linkedin_client_id                  = ""
+linkedin_client_secret              = ""
+
+# Mailchimp
+mailchimp_api_key                   = ""
+
+# Shopify
+shopify_api_key                     = ""
+shopify_api_secret                  = ""
+
+# Stripe
+stripe_api_key                      = ""
