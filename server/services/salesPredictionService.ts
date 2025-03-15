@@ -29,11 +29,47 @@ export class SalesPredictionService {
     return SalesPredictionService.instance;
   }
 
+  private async trainModel(historicalData: any[]): Promise<void> {
+    try {
+      const trainingData = historicalData.map(record => ({
+        features: {
+          marketing_spend: record.spend,
+          season: new Date(record.date).getMonth(),
+          campaign_type: record.type,
+          channel_mix: record.channels,
+          historical_conversion_rate: record.conversionRate
+        },
+        labels: {
+          revenue: record.revenue,
+          roas: record.roas
+        }
+      }));
+
+      await predictionService.trainModel({
+        modelId: 'sales_prediction_model',
+        trainingData,
+        modelType: 'regression',
+        hyperparameters: {
+          learningRate: 0.01,
+          epochs: 100,
+          batchSize: 32
+        }
+      });
+    } catch (error) {
+      console.error('Error training model:', error);
+      throw error;
+    }
+  }
+
   public async predictSales(tokens: any, startDate: string, endDate: string): Promise<SalesPrediction> {
     try {
       // Get data from Google services
       const analyticsData = await getAnalyticsData(tokens, 'viewId', startDate, endDate);
       const adsData = await getAdsData(tokens, 'customerId', startDate, endDate);
+      
+      // Train model with historical data
+      const historicalData = await this.getHistoricalData(startDate, endDate);
+      await this.trainModel(historicalData);
 
       // Calculate current metrics
       const totalSpend = adsData.totalSpend;

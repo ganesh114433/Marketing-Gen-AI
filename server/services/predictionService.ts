@@ -239,6 +239,24 @@ export class PredictionService {
       // Get historical campaign data to use as context
       const historicalMetrics = await this.getHistoricalCampaignMetrics(request.platform);
       
+      // Get market trends and seasonality data
+      const marketTrends = await this.getMarketTrendsData();
+      const seasonality = await this.getSeasonalityFactors(request.startDate, request.endDate);
+      
+      // Enhanced prediction context
+      const predictionContext = {
+        historicalData: historicalMetrics,
+        marketTrends,
+        seasonality,
+        campaignSpecifics: {
+          industry: request.industry,
+          objective: request.objective,
+          targetAudience: request.targetAudience,
+          budget: request.budget,
+          platform: request.platform
+        }
+      };
+      
       // Create a system prompt that includes historical data and instructions
       const systemPrompt = `
         You are an expert marketing analytics AI that predicts campaign performance metrics.
