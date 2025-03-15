@@ -130,9 +130,11 @@ export class PredictionService {
     console.log('[prediction] Prediction service started');
     
     if (useGoogleCloud) {
+      await this.initializeVertexAI();
       this.setupGoogleCloudListeners();
     } else {
-      // Set up local processing for development
+      // Initialize TensorFlow.js for local predictions
+      await this.initializeLocalModel();
       this.processingInterval = setInterval(() => this.processLocalQueue(), 10000);
     }
   }

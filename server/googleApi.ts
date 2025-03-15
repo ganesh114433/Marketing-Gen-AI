@@ -42,13 +42,19 @@ export async function getAnalyticsData(tokens: any, viewId: string, startDate: s
   try {
     const client = setUserCredentials(tokens);
     
-    // This would use the real Google Analytics API in production
-    // For now, we simulate fetching data
-    // Normally would use: const analytics = google.analytics({ version: 'v3', auth: client });
+    const analytics = google.analytics({ version: 'v4', auth: client });
+    const response = await analytics.properties.runReport({
+      property: `properties/${viewId}`,
+      dateRanges: [{ startDate, endDate }],
+      metrics: [
+        { name: 'screenPageViews' },
+        { name: 'conversions' },
+        { name: 'totalRevenue' }
+      ],
+      dimensions: [{ name: 'date' }]
+    });
     
-    // Simulated Analytics data
-    return {
-      impressions: Math.floor(Math.random() * 1000000) + 500000,
+    return processAnalyticsResponse(response.data);
       clicks: Math.floor(Math.random() * 100000) + 50000,
       conversions: Math.floor(Math.random() * 5000) + 1000,
       revenue: Math.floor(Math.random() * 50000) + 20000,
