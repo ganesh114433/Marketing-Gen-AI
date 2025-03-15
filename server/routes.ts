@@ -21,6 +21,7 @@ import {
 } from "./api/automation";
 import { ZodError } from "zod";
 import { salesPredictionService } from "./api/salesPrediction"; // Import the sales prediction service
+import chatbotRoutes from './api/chatbot'; // Import chatbot routes
 
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -436,6 +437,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to get sales predictions' });
     }
   });
+
+  router.use('/chatbot', chatbotRoutes); // Add chatbot routes
 
   // Register all routes with the /api prefix
   app.use("/api", router);

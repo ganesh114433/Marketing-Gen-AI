@@ -719,6 +719,51 @@ resource "google_bigquery_connection" "looker_connection" {
   depends_on = [google_project_service.data_services]
 }
 
+# Data indexing and search resources
+resource "google_bigquery_connection" "vertex_ai_search" {
+  connection_id = "vertex-ai-search"
+  location      = var.region
+  
+  cloud_resource {}
+}
+
+resource "google_storage_bucket" "search_index_bucket" {
+  name          = "${local.bucket_prefix}-search-index"
+  location      = var.region
+  force_destroy = var.bucket_force_destroy
+  
+  labels = merge(local.common_labels, {
+    data_type = "search_index"
+    purpose   = "ai_chatbot"
+  })
+}
+
+resource "google_vertex_ai_index" "marketing_data_index" {
+  count       = var.enable_vertex_ai ? 1 : 0
+  region      = var.vertex_ai_region
+  display_name = "marketing-data-index"
+  description = "Index for marketing and sales data"
+  
+  metadata {
+    contents_delta_uri = "gs://${google_storage_bucket.search_index_bucket.name}/index-data/"
+    config {
+      dimensions = 1024
+      approximate_neighbors_count = 150
+      distance_measure_type = "DOT_PRODUCT_DISTANCE"
+      algorithm_config {
+        tree_ah_config {
+          leaf_node_embedding_count = 1000
+          leaf_nodes_to_search_percent = 10
+        }
+      }
+    }
+  }
+  
+  index_update_method = "BATCH_UPDATE"
+  
+  depends_on = [google_project_service.ai_apis]
+}
+
 # Data Catalog entries for datasets and ML models
 resource "google_data_catalog_entry_group" "marketing_data_group" {
   count       = var.enable_data_catalog ? 1 : 0
