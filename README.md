@@ -1,3 +1,4 @@
+
 # AI-Powered Digital Marketing Automation Platform
 
 This application automatically generates and posts content to social media platforms based on calendar events and company special dates. It integrates with Google Ads and Analytics, provides campaign performance dashboards, and operates without human intervention for content distribution.
@@ -9,6 +10,10 @@ This application automatically generates and posts content to social media platf
 - **Content Generation**: Uses AI to generate marketing content
 - **Campaign Analytics**: Integrates with Google Ads and Analytics for performance tracking
 - **Automation API**: Endpoints for monitoring and controlling automation services
+- **AI Prediction**: Real-time campaign performance prediction using BigQuery ML and Looker Studio
+- **Email Marketing**: Automated customer engagement through calendar events
+- **Sales Analytics**: Predictive analytics based on digital spend and marketing metrics
+- **Multi-Platform Integration**: Support for Facebook and other social media platforms
 
 ## Local Development
 
@@ -16,6 +21,7 @@ This application automatically generates and posts content to social media platf
 
 - Node.js 20 or higher
 - NPM or Yarn
+- Google Cloud credentials for BigQuery and Looker integration
 
 ### Setup
 
@@ -27,62 +33,36 @@ This application automatically generates and posts content to social media platf
 3. Set up environment variables:
    ```
    OPENAI_API_KEY=your_openai_api_key
+   GCP_PROJECT_ID=your_project_id
+   GOOGLE_APPLICATION_CREDENTIALS=path_to_credentials.json
    ```
 4. Run the application:
    ```
    npm run dev
    ```
 
-## Google Cloud Deployment
+## Features Configuration
 
-### Prerequisites
+### AI Prediction Service
+The platform uses BigQuery and Looker Studio for real-time ETL and predictions:
+- Automated data processing pipeline
+- Real-time campaign performance predictions
+- Machine learning model training
+- Custom dashboards in Looker Studio
 
-- Google Cloud account with a project
-- Google Cloud CLI (`gcloud`)
-- Docker
-- Terraform
+### Marketing Automation
+- Calendar-based event triggering
+- Multi-platform content posting
+- Email campaign automation
+- Customer engagement tracking
+- Performance analytics
 
-### Deployment Steps
-
-1. Set your OpenAI API key as an environment variable:
-   ```
-   export OPENAI_API_KEY=your_openai_api_key
-   ```
-
-2. Run the deployment script:
-   ```
-   ./scripts/deploy.sh --project-id your-gcp-project-id
-   ```
-
-   Optional parameters:
-   - `--region`: The Google Cloud region (default: `us-central1`)
-   - `--app-name`: The name of the application (default: `marketing-automation`)
-   - `--environment`: The deployment environment (default: `prod`)
-
-3. The script will:
-   - Set up your Google Cloud project
-   - Build and push the Docker image
-   - Apply the Terraform configuration
-   - Deploy the application to Cloud Run
-   - Output the service URL
-
-## Least Privilege Access
-
-The deployment uses a dedicated service account with minimal permissions:
-
-- The Cloud Run service uses a dedicated service account
-- The service account only has access to necessary resources (Secret Manager)
-- Secrets are stored in Google Secret Manager
-- API keys and credentials are never stored in the codebase
-
-## Automation
-
-The application includes two primary automation services:
-
-1. **Auto-Posting Service**: Checks for events that are due to be posted and processes them.
-2. **Event Scheduler**: Checks for upcoming special dates and schedules content for them.
-
-These services operate on a regular interval and can be controlled through the automation API endpoints.
+### Sales Analytics
+- Digital spend analysis
+- ROI tracking
+- Predictive sales modeling
+- Customer segmentation
+- Campaign attribution
 
 ## API Endpoints
 
@@ -91,3 +71,24 @@ These services operate on a regular interval and can be controlled through the a
 - `POST /api/automation/event-scheduler`: Toggle the event scheduler service
 - `POST /api/automation/check-events`: Force an immediate check for events to post
 - `GET /api/automation/activity`: Get recent automation activity logs
+- `GET /api/predictions`: Get campaign performance predictions
+- `GET /api/analytics/sales`: Get sales analytics data
+- `POST /api/marketing/trigger`: Trigger marketing campaign posts
+
+## Data Storage
+
+The application stores data in three main locations:
+- Raw data: Unprocessed campaign and analytics data
+- Processed data: Cleaned and normalized data
+- Transformed data: Analysis-ready data with derived metrics
+
+## Security
+
+- Secure credential storage
+- OAuth2 authentication for social media platforms
+- Environment-based configuration
+- Least privilege access principles
+
+## Support
+
+For issues and feature requests, please use the issue tracker in the repository.
