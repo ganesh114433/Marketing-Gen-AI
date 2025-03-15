@@ -3,3 +3,9 @@ region          = "us-central1"
 app_name        = "marketing-automation"
 container_image = "us-central1-docker.pkg.dev/your-gcp-project-id/marketing-automation-repo/marketing-automation:latest"
 openai_api_key  = "your-openai-api-key"
+
+# Optional scaling parameters
+min_instance_count = 1
+max_instance_count = 3
+cpu_limit          = "1"
+memory_limit       = "512Mi"
