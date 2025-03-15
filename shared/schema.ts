@@ -140,6 +140,47 @@ export const insertIntegrationSchema = createInsertSchema(integrations).pick({
   credentials: true,
 });
 
+// Customer schema
+export const customers = pgTable("customers", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  name: text("name"),
+  segment: text("segment"),
+  preferences: json("preferences"),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCustomerSchema = createInsertSchema(customers).pick({
+  email: true,
+  name: true,
+  segment: true,
+  preferences: true,
+  metadata: true,
+});
+
+
+// Email Campaign schema
+export const emailCampaigns = pgTable("email_campaigns", {
+  id: serial("id").primaryKey(),
+  subject: text("subject").notNull(),
+  content: text("content").notNull(),
+  segment: text("segment").notNull(),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  status: text("status").notNull(), // draft, scheduled, sent
+  metadata: json("metadata"),
+});
+
+export const insertEmailCampaignSchema = createInsertSchema(emailCampaigns).pick({
+  subject: true,
+  content: true,
+  segment: true,
+  scheduledDate: true,
+  status: true,
+  metadata: true,
+});
+
+
 // Export all types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -158,6 +199,13 @@ export type InsertCampaignMetric = z.infer<typeof insertCampaignMetricsSchema>;
 
 export type Integration = typeof integrations.$inferSelect;
 export type InsertIntegration = z.infer<typeof insertIntegrationSchema>;
+
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = z.infer<typeof insertCustomerSchema>;
+
+export type EmailCampaign = typeof emailCampaigns.$inferSelect;
+export type InsertEmailCampaign = z.infer<typeof insertEmailCampaignSchema>;
+
 
 // Custom schema for content generation request
 export const contentGenerationSchema = z.object({

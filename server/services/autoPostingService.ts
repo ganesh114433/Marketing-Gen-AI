@@ -220,6 +220,33 @@ export class AutoPostingService {
    * Post content to social media platform
    * In a real application, this would use the platform-specific APIs
    */
+  private async processEvent(event: CalendarEvent, content: ContentEntry): Promise<void> {
+    if (event.type === 'email') {
+      await this.sendEmailCampaign(event, content);
+    } else {
+      await this.postToSocialMedia(event, content);
+    }
+  }
+
+  private async sendEmailCampaign(event: CalendarEvent, content: ContentEntry): Promise<void> {
+    const customers = await customerService.getCustomersBySegment(event.segment || 'all');
+    
+    const campaign: EmailCampaign = {
+      id: Date.now(),
+      subject: content.title,
+      content: content.body,
+      segment: event.segment || 'all',
+      scheduledDate: new Date(),
+      status: 'scheduled',
+      metadata: {
+        campaignType: event.type,
+        templateId: event.templateId
+      }
+    };
+
+    await customerService.sendCampaignEmail(campaign, customers);
+  }
+
   private async postToSocialMedia(event: CalendarEvent, content: ContentEntry): Promise<void> {
     log(`Posting to ${event.platform || 'unknown platform'}: "${content.title}"`, 'autopost');
     

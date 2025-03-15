@@ -74,6 +74,21 @@ resource "google_artifact_registry_repository" "app_repository" {
   depends_on = [google_project_service.required_services]
 }
 
+# Create secrets for email and social media credentials
+resource "google_secret_manager_secret" "email_credentials" {
+  secret_id = "email-credentials"
+  replication {
+    automatic = true
+  }
+}
+
+resource "google_secret_manager_secret" "social_media_credentials" {
+  secret_id = "social-media-credentials"
+  replication {
+    automatic = true
+  }
+}
+
 # Create a Secret Manager secret for OpenAI API key
 resource "google_secret_manager_secret" "openai_api_key" {
   secret_id = "openai-api-key"
