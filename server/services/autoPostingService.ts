@@ -32,10 +32,10 @@ export class AutoPostingService {
 
     this.isRunning = true;
     log(`Auto posting service started, checking every ${checkIntervalMinutes} minutes`, 'autopost');
-    
+
     // Do an initial check
     this.checkAndProcessEvents();
-    
+
     // Schedule regular checks
     this.checkInterval = setInterval(() => {
       this.checkAndProcessEvents();
@@ -60,20 +60,20 @@ export class AutoPostingService {
   private async checkAndProcessEvents(): Promise<void> {
     try {
       log('Checking for events to autopost...', 'autopost');
-      
+
       const now = new Date();
-      
+
       // Get all calendar events that are:
       // 1. Due to be posted (current time is past the scheduled start time)
       // 2. Have status 'ready' (approved and ready to post)
       // 3. Don't have content yet, or have content in "ready" status
-      
+
       // Get all calendar events
       const allEvents = await this.getAllEvents();
       const eventsDueToPost = this.filterEventsDueToPost(allEvents, now);
-      
+
       log(`Found ${eventsDueToPost.length} events due for posting`, 'autopost');
-      
+
       // Process each event
       for (const event of eventsDueToPost) {
         await this.processEvent(event);
@@ -90,16 +90,16 @@ export class AutoPostingService {
     // In a real application, we would filter this query
     // For demo purposes, we get all events and filter in memory
     const allEvents: CalendarEvent[] = [];
-    
+
     // Get all users
     const users = await this.getAllUsers();
-    
+
     // Get events for each user
     for (const user of users) {
       const userEvents = await storage.getCalendarEventsByUserId(user.id);
       allEvents.push(...userEvents);
     }
-    
+
     return allEvents;
   }
 
@@ -122,7 +122,7 @@ export class AutoPostingService {
       if (event.status === 'published') {
         return false;
       }
-      
+
       // Check if event is scheduled to start in the past or present
       // We use <= to include events that are exactly at the current time
       return event.status === 'ready' && new Date(event.startDate) <= now;
@@ -134,32 +134,32 @@ export class AutoPostingService {
    */
   private async processEvent(event: CalendarEvent): Promise<void> {
     log(`Processing event ID: ${event.id} - "${event.title}" for platform ${event.platform}`, 'autopost');
-    
+
     try {
       let contentEntry: ContentEntry | undefined;
-      
+
       // If the event has content associated with it, retrieve it
       if (event.contentId) {
         contentEntry = await storage.getContentEntry(event.contentId);
       }
-      
+
       // If we don't have content, generate it
       if (!contentEntry) {
         contentEntry = await this.generateContentForEvent(event);
-        
+
         // Update the event with the new content ID
         await storage.updateCalendarEvent(event.id, { 
           contentId: contentEntry.id,
           status: 'published'
         });
       }
-      
+
       // Post the content to the social media platform
       await this.postToSocialMedia(event, contentEntry);
-      
+
       // Update the event status to published
       await storage.updateCalendarEvent(event.id, { status: 'published' });
-      
+
       log(`Successfully processed and published event ID: ${event.id}`, 'autopost');
     } catch (error) {
       log(`Failed to process event ID: ${event.id} - Error: ${error}`, 'autopost');
@@ -171,20 +171,20 @@ export class AutoPostingService {
    */
   private async generateContentForEvent(event: CalendarEvent): Promise<ContentEntry> {
     log(`Generating content for event ID: ${event.id}`, 'autopost');
-    
+
     // Determine the content type based on the platform
     const contentType = this.getPlatformContentType(event.platform);
-    
+
     // Generate AI content using OpenAI
     const prompt = `Create a ${contentType} post for ${event.platform} about "${event.title}" with the following description: ${event.description || 'no description'}. The tone should be professional and engaging.`;
-    
+
     const generatedContent = await generateContent({
       contentType,
       topic: event.title,
       tone: 'professional',
       length: 'medium'
     });
-    
+
     // Create a new content entry
     const contentEntry: InsertContentEntry = {
       title: event.title,
@@ -194,7 +194,7 @@ export class AutoPostingService {
       userId: event.userId,
       wordCount: generatedContent.split(/\s+/).length
     };
-    
+
     return storage.createContentEntry(contentEntry);
   }
 
@@ -203,7 +203,7 @@ export class AutoPostingService {
    */
   private getPlatformContentType(platform: string | null): string {
     if (!platform) return 'social';
-    
+
     const platformMap: Record<string, string> = {
       'Facebook': 'social',
       'Instagram': 'social',
@@ -212,7 +212,7 @@ export class AutoPostingService {
       'Email': 'email',
       'Website': 'blog'
     };
-    
+
     return platformMap[platform] || 'social';
   }
 
@@ -230,7 +230,7 @@ export class AutoPostingService {
 
   private async sendEmailCampaign(event: CalendarEvent, content: ContentEntry): Promise<void> {
     const customers = await customerService.getCustomersBySegment(event.segment || 'all');
-    
+
     const campaign: EmailCampaign = {
       id: Date.now(),
       subject: content.title,
@@ -249,7 +249,7 @@ export class AutoPostingService {
 
   private async postToSocialMedia(event: CalendarEvent, content: ContentEntry): Promise<void> {
     log(`Posting to ${event.platform || 'unknown platform'}: "${content.title}"`, 'autopost');
-    
+
     if (!event.platform) {
       log('No platform specified, skipping posting', 'autopost');
       return;
@@ -263,7 +263,7 @@ export class AutoPostingService {
         style: 'professional',
         size: 'large'
       };
-      
+
       try {
         const image = await generateMarketingImage(imageOptions);
         imageUrl = image.url;
@@ -293,9 +293,9 @@ export class AutoPostingService {
       log(`Failed to post to ${event.platform}: ${error}`, 'autopost');
       throw error;
     }
-    
+
     log(`Successfully posted to ${event.platform}: "${content.title}"`, 'autopost');
-    
+
     // In a real app, we might return post IDs or other platform-specific information
   }
 }

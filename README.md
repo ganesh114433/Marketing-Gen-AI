@@ -127,20 +127,51 @@ A comprehensive marketing automation platform that leverages AI for content gene
 
 ## Deployment Steps
 
-1. **Build Application**
+1. **Set Required Environment Variables**
+   ```bash
+   OPENAI_API_KEY=your_openai_key
+   GCP_PROJECT_ID=your_project_id
+   GOOGLE_APPLICATION_CREDENTIALS=path_to_credentials.json
+   GOOGLE_ANALYTICS_ID=your_ga4_id
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Run Tests**
+   ```bash
+   npm run test
+   ```
+
+4. **Build Application**
    ```bash
    npm run build
    ```
 
-2. **Deploy Infrastructure**
+5. **Deploy to Google Cloud**
+   - Ensure you have Google Cloud CLI installed
+   - Authenticate with: `gcloud auth login`
+   - Set project: `gcloud config set project YOUR_PROJECT_ID`
+   - Deploy:
    ```bash
-   ./scripts/deploy.sh --project-id YOUR_PROJECT_ID --region us-central1
+   gcloud run deploy marketing-automation \
+     --source . \
+     --region us-central1 \
+     --platform managed \
+     --allow-unauthenticated \
+     --service-account YOUR_SERVICE_ACCOUNT@YOUR_PROJECT_ID.iam.gserviceaccount.com
    ```
 
-3. **Configure Services**
-   - Set up Cloud Run service
-   - Configure auto-scaling parameters
-   - Set up monitoring and logging
+6. **Verify Deployment**
+   - Check Cloud Run console for service status
+   - Verify application logs
+   - Test endpoints using provided service URL
+   - Monitor BigQuery data ingestion
+   - Verify Looker Studio dashboard connectivity
+
+The application will be accessible at the Cloud Run service URL provided after deployment.
 
 ## Service Architecture
 
