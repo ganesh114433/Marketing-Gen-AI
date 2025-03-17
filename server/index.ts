@@ -6,6 +6,13 @@ import { eventScheduler } from "./services/eventScheduler";
 
 const app = express();
 app.use(express.json());
+
+// Track all requests
+app.use((req, res, next) => {
+  trackingService.trackPageView(req.path, req.path)
+    .catch(console.error);
+  next();
+});
 app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {

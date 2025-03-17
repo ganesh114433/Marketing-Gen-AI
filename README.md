@@ -311,3 +311,18 @@ For issues and feature requests:
 ## License
 
 This project is proprietary and confidential.
+
+
+## Configuration File
+
+To successfully set up the infrastructure for our application in Google Cloud Platform (GCP), it is essential to configure the settings in the `terraform/config.auto.tfvars` file. This file contains key configurations that dictate various aspects of the deployment.
+
+### Key Configuration Parameters
+
+- **client_name**: This parameter is used for resource naming, helping to identify resources associated with your organization.
+- **client_environment**: Specify the environment for your deployment (e.g., production, staging, dev).
+- **project_id**: Your unique GCP project ID, which is required to associate all resources under this project.
+- **container_image**: The path to the Docker image used for your application, hosted in the Artifact Registry.
+- **openai_api_key**: Include your OpenAI API key for AI functionalities within the application.
+
+Ensure that you update these fields according to your specific deployment requirements to ensure proper resource allocation and functionality.
